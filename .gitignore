@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#test files
+test-orshot.js
+brand_guidlines.md
+
