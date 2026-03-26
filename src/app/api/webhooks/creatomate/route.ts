@@ -68,7 +68,7 @@ export async function POST(req: Request) {
          property_id: post.property_id,
          agent_id: post.agent_id,
          organization_id: profile?.organization_id, // Fill the NOT NULL constraint
-         asset_type: 'video',
+         asset_type: 'VIDEO',
          storage_path: payloadData.url
        });
 
