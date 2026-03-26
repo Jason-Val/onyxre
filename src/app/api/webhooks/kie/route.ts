@@ -7,41 +7,43 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  // Always initialize local supabase client to log EVERYTHING even crashes
+  const supabaseAdmin = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://agaltnnnnaxjmjwuybhq.supabase.co",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll() { return [] }, setAll() {} } }
+  );
+
   try {
     const url = new URL(req.url);
     const postId = url.searchParams.get("postId");
     const indexStr = url.searchParams.get("index");
     
     if (!postId || !indexStr) {
+      await supabaseAdmin.from('webhook_logs').insert({ source: 'kie.ai-badparams', error_msg: "Missing query params", payload: { url: req.url } });
       return NextResponse.json({ error: "Missing tracking params" }, { status: 400 });
     }
     
     const index = parseInt(indexStr, 10);
-    const body = await req.json();
+    
+    const rawBody = await req.text();
+    let body: any = {};
+    try {
+      body = rawBody ? JSON.parse(rawBody) : {};
+    } catch (e: any) {
+      body = { msg: "JSON Parse failed", raw: rawBody, err: e.message };
+    }
+
     console.log(`[KIE WEBHOOK HIT] Post: ${postId}, Index: ${index}`);
     console.log("[KIE PAYLOAD]", JSON.stringify(body, null, 2));
-
-    // Initialize Supabase admin client
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const keyToUse = serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const supabaseAdmin = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      keyToUse,
-      {
-        cookies: {
-          getAll() { return [] },
-          setAll() {},
-        },
-      }
-    );
 
     // Log the payload to our new debugging table
     await supabaseAdmin.from('webhook_logs').insert({
       source: 'kie.ai',
       post_id: postId,
-      payload: body
+      payload: { ...body, _rawHeaders: Object.fromEntries(req.headers) }
     });
+
 
     // Support multiple Kie.ai response formats by checking all common fields
     const videoUrl = 
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
         error: "Post not found", 
         postId, 
         dbError: fetchErr,
-        keyUsed: `${keyToUse.substring(0, 5)}...`
+        keyUsed: process.env.SUPABASE_SERVICE_ROLE_KEY ? "service_role" : "anon"
       }, { status: 404 });
     }
 
@@ -167,6 +169,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, progress: `${newCompleted}/${assets.total}` });
 
   } catch (err: any) {
+    if (supabaseAdmin) {
+      try { await supabaseAdmin.from('webhook_logs').insert({ source: 'kie.ai-crash', error_msg: err.message, payload: { rawUrl: req.url } }); } catch (_) {}
+    }
     console.error("Kie Callback Error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
