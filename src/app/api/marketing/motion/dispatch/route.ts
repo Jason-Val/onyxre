@@ -18,7 +18,7 @@ export async function POST(req: Request) {
               cookiesToSet.forEach(({ name, value, options }) => {
                 cookieStore.set(name, value, options)
               })
-            } catch (error) {}
+            } catch (error) { }
           },
         },
       }
@@ -26,21 +26,21 @@ export async function POST(req: Request) {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 1. Create a placeholder post in the database
     const { data: post, error: dbError } = await supabase
       .from('property_marketing_posts')
       .insert({
-         property_id: propertyId || null,
-         agent_id: user.id,
-         image_url: imageUrls[0], // Temporary preview
-         caption: text || "Generated Motion Post",
-         scheduled_at: scheduledAt || null,
-         platforms: platforms || [],
-         status: 'generating',
-         motion_assets: { total: imageUrls.length, completed: 0, urls: [], ...motionData }
+        property_id: propertyId || null,
+        agent_id: user.id,
+        image_url: imageUrls[0], // Temporary preview
+        caption: text || "Generated Motion Post",
+        scheduled_at: scheduledAt || null,
+        platforms: platforms || [],
+        status: 'generating',
+        motion_assets: { total: imageUrls.length, completed: 0, urls: [], ...motionData }
       })
       .select('id')
       .single();
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
     const kiePromises = imageUrls.map(async (url: string, index: number) => {
       const callbackUrl = `${protocol}://${domain}/api/webhooks/kie?postId=${post.id}&index=${index}`;
-      
+
       try {
         const res = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
           method: 'POST',
@@ -65,14 +65,14 @@ export async function POST(req: Request) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: "grok-imagine/image-to-video",
+            model: "hailuo/2-3-image-to-video-standard",
             callBackUrl: callbackUrl,
             input: {
-                image_urls: [url],
-                prompt: "A slow, cinematic gimbal push-in shot moving smoothly toward the center of the frame. The camera performs a gentle, micro-arc clockwise rotation around the focal point. High-end real estate videography style, 24fps, perfectly stable motion. Zero morphing. Maintain all original architectural details and furniture exactly as they appear in the static image. No new objects, no hallucinations, no people. Lighting remains static and natural.",
-                mode: "normal",
-                duration: "6",
-                resolution: "720p"
+              image_urls: [url],
+              prompt: "A slow, cinematic gimbal push-in shot moving smoothly toward the center of the frame. The camera performs a gentle, micro-arc clockwise rotation around the focal point. High-end real estate videography style, 24fps, perfectly stable motion. Zero morphing. Maintain all original architectural details and furniture exactly as they appear in the static image. No new objects, no hallucinations, no people. Lighting remains static and natural.",
+              mode: "normal",
+              duration: "6",
+              resolution: "768p"
             }
           })
         });
@@ -95,21 +95,23 @@ export async function POST(req: Request) {
     const failedResults = results.filter(r => !r.ok);
 
     if (failedResults.length > 0) {
-       console.error(`${failedResults.length} Kie.ai dispatch requests failed.`);
-       if (failedResults.length === imageUrls.length) {
-          // All failed - likely an auth or quota issue
-          const firstErr = failedResults[0].error;
-          return NextResponse.json({ 
-            error: `Kie.ai rejected ALL requests: ${firstErr}`,
-            details: failedResults 
-          }, { status: 502 });
-       }
+      console.error(`[KIE DISPATCH] ${failedResults.length} requests failed.`, failedResults);
+
+      if (failedResults.length === imageUrls.length) {
+        // All failed - definitely an upstream or auth issue
+        const firstErrBody = failedResults[0].error;
+        return NextResponse.json({
+          error: `Kie.ai (Grok) rejected your request: ${firstErrBody}`,
+          details: failedResults,
+          hint: "Check Kie.ai / Grok status page. Today (Mar 26) has reported outages."
+        }, { status: 502 });
+      }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       postId: post.id,
-      message: "Motion generation dispatched successfully."
+      message: `${results.filter(r => r.ok).length} videos dispatched successfully.`
     });
 
   } catch (err: any) {
