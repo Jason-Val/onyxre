@@ -21,6 +21,28 @@ export async function POST(req: Request) {
     console.log(`[KIE WEBHOOK HIT] Post: ${postId}, Index: ${index}`);
     console.log("[KIE PAYLOAD]", JSON.stringify(body, null, 2));
 
+    // Initialize Supabase admin client
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const keyToUse = serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+    const supabaseAdmin = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      keyToUse,
+      {
+        cookies: {
+          getAll() { return [] },
+          setAll() {},
+        },
+      }
+    );
+
+    // Log the payload to our new debugging table
+    await supabaseAdmin.from('webhook_logs').insert({
+      source: 'kie.ai',
+      post_id: postId,
+      payload: body
+    });
+
     // Support multiple Kie.ai response formats by checking all common fields
     const videoUrl = 
       body?.data?.video_url || 
@@ -34,25 +56,11 @@ export async function POST(req: Request) {
       (body?.data && typeof body.data === 'string' && body.data.startsWith('http') ? body.data : null);
     
     if (!videoUrl) {
+      await supabaseAdmin.from('webhook_logs').insert({ source: 'kie.ai-error', post_id: postId, error_msg: "No video URL found", payload: body });
       console.error("[KIE WEBHOOK ERROR] No video URL found in payload. Structure:", JSON.stringify(body));
       return NextResponse.json({ error: "No video returned", received: body }, { status: 400 });
     }
 
-    // Initialize Supabase admin client
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const keyToUse = serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    console.log(`[KIE AUTH] Using Key: ${keyToUse.substring(0, 10)}... (isServiceRole: ${!!serviceRoleKey})`);
-
-    const supabaseAdmin = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      keyToUse,
-      {
-        cookies: {
-          getAll() { return [] },
-          setAll() {},
-        },
-      }
-    );
 
     // Fetch current post
     const { data: post, error: fetchErr } = await supabaseAdmin
@@ -62,6 +70,7 @@ export async function POST(req: Request) {
       .single();
 
     if (fetchErr || !post) {
+      await supabaseAdmin.from('webhook_logs').insert({ source: 'kie.ai-error', post_id: postId, error_msg: fetchErr ? fetchErr.message : "Post not found" });
       console.error(`[KIE WEBHOOK ERROR] Post ${postId} not found in DB.`, fetchErr);
       return NextResponse.json({ 
         error: "Post not found", 
@@ -85,6 +94,7 @@ export async function POST(req: Request) {
       .eq('id', postId);
 
     if (updateErr) {
+      await supabaseAdmin.from('webhook_logs').insert({ source: 'kie.ai-error', post_id: postId, error_msg: updateErr.message });
       console.error(`[KIE WEBHOOK UPDATE FAILED] Post: ${postId}`, updateErr);
       return NextResponse.json({ 
         error: "Database update failed", 
