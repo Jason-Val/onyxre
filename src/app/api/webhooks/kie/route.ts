@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+export async function GET() {
+  return NextResponse.json({ status: "Ready", message: "Kie.ai Webhook is active and waiting for POST callbacks." });
+}
+
 export async function POST(req: Request) {
   try {
     const url = new URL(req.url);
