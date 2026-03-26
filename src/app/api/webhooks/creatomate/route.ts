@@ -60,13 +60,22 @@ export async function POST(req: Request) {
     }
 
     // Insert the finalized video into the media_assets table as requested by the user
-    if (post) {
-      await supabaseAdmin.from('media_assets').insert({
-        property_id: post.property_id,
-        agent_id: post.agent_id,
-        asset_type: 'video',
-        storage_path: payloadData.url
-      });
+    if (post && post.agent_id) {
+       // Fetch the organization_id from the profiles table, which is a required NOT NULL field for media_assets
+       const { data: profile } = await supabaseAdmin.from('profiles').select('organization_id').eq('id', post.agent_id).single();
+
+       const { error: insertErr } = await supabaseAdmin.from('media_assets').insert({
+         property_id: post.property_id,
+         agent_id: post.agent_id,
+         organization_id: profile?.organization_id, // Fill the NOT NULL constraint
+         asset_type: 'video',
+         storage_path: payloadData.url
+       });
+
+       if (insertErr) {
+         await supabaseAdmin.from('webhook_logs').insert({ source: 'creatomate-mediaassets-fail', post_id: postId, error_msg: insertErr.message });
+         console.error("Failed to insert media_asset", insertErr);
+       }
     }
 
     return NextResponse.json({ success: true, videoUrl: payloadData.url });
