@@ -25,10 +25,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No video returned", received: body }, { status: 400 });
     }
 
-    // Initialize Supabase admin client (Service Role is needed because Webhooks are unauthenticated)
+    // Initialize Supabase admin client
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const keyToUse = serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    console.log(`[KIE AUTH] Using Key: ${keyToUse.substring(0, 10)}... (isServiceRole: ${!!serviceRoleKey})`);
+
     const supabaseAdmin = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      keyToUse,
       {
         cookies: {
           getAll() { return [] },
@@ -45,8 +49,13 @@ export async function POST(req: Request) {
       .single();
 
     if (fetchErr || !post) {
-      console.error("Post not found", fetchErr);
-      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      console.error(`[KIE WEBHOOK ERROR] Post ${postId} not found in DB.`, fetchErr);
+      return NextResponse.json({ 
+        error: "Post not found", 
+        postId, 
+        dbError: fetchErr,
+        keyUsed: `${keyToUse.substring(0, 5)}...`
+      }, { status: 404 });
     }
 
     const assets = post.motion_assets || { total: 5, completed: 0, urls: [] };
