@@ -54,39 +54,55 @@ export async function POST(req: Request) {
     const domain = req.headers.get("host") || "localhost:3000";
     const protocol = domain.includes("localhost") ? "http" : "https";
 
-    const kiePromises = imageUrls.map((url: string, index: number) => {
-      // Append postId and index to webhook URL so we know which video this is when it completes
+    const kiePromises = imageUrls.map(async (url: string, index: number) => {
       const callbackUrl = `${protocol}://${domain}/api/webhooks/kie?postId=${post.id}&index=${index}`;
+      
+      try {
+        const res = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.KIE_API_KEY || process.env.KIE_AI_GENERATICE_AI_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: "grok-imagine/image-to-video",
+            callBackUrl: callbackUrl,
+            input: {
+                image_urls: [url],
+                prompt: "A slow, cinematic gimbal push-in shot moving smoothly toward the center of the frame. The camera performs a gentle, micro-arc clockwise rotation around the focal point. High-end real estate videography style, 24fps, perfectly stable motion. Zero morphing. Maintain all original architectural details and furniture exactly as they appear in the static image. No new objects, no hallucinations, no people. Lighting remains static and natural.",
+                mode: "normal",
+                duration: "6",
+                resolution: "720p"
+            }
+          })
+        });
 
-      return fetch('https://api.kie.ai/api/v1/jobs/createTask', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.KIE_API_KEY || process.env.KIE_AI_GENERATICE_AI_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: "grok-imagine/image-to-video",
-          callBackUrl: callbackUrl,
-          input: {
-              image_urls: [url],
-              prompt: "A slow, cinematic gimbal push-in shot moving smoothly toward the center of the frame. The camera performs a gentle, micro-arc clockwise rotation around the focal point. High-end real estate videography style, 24fps, perfectly stable motion. Zero morphing. Maintain all original architectural details and furniture exactly as they appear in the static image. No new objects, no hallucinations, no people. Lighting remains static and natural.",
-              mode: "normal",
-              duration: "6",
-              resolution: "720p"
-          }
-        })
-      });
+        if (!res.ok) {
+          const errBody = await res.text();
+          console.error(`[KIE DISPATCH ERROR] Image ${index} failed:`, errBody);
+          return { ok: false, error: errBody, index };
+        }
+
+        const data = await res.json();
+        return { ok: true, data, index };
+      } catch (err: any) {
+        console.error(`[KIE DISPATCH EXCEPTION] Image ${index}:`, err);
+        return { ok: false, error: err.message, index };
+      }
     });
 
-    // We don't wait for completion. We just wait for the tasks to successfully queue.
-    const responses = await Promise.allSettled(kiePromises);
-    
-    // Check if any failed to queue
-    const failed = responses.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok));
-    if (failed.length > 0) {
-       console.error("Some Kie.ai dispatch requests failed to queue.");
-       if (failed.length === kiePromises.length) {
-          return NextResponse.json({ error: "Kie.ai API rejected the generation requests. Check API keys and quotas." }, { status: 502 });
+    const results = await Promise.all(kiePromises);
+    const failedResults = results.filter(r => !r.ok);
+
+    if (failedResults.length > 0) {
+       console.error(`${failedResults.length} Kie.ai dispatch requests failed.`);
+       if (failedResults.length === imageUrls.length) {
+          // All failed - likely an auth or quota issue
+          const firstErr = failedResults[0].error;
+          return NextResponse.json({ 
+            error: `Kie.ai rejected ALL requests: ${firstErr}`,
+            details: failedResults 
+          }, { status: 502 });
        }
     }
 

@@ -14,14 +14,15 @@ export async function POST(req: Request) {
     
     const index = parseInt(indexStr, 10);
     const body = await req.json();
-    console.log(`[KIE WEBHOOK RECEIVED] Post ${postId} Index ${index}`, body);
+    console.log(`[KIE WEBHOOK HIT] Post: ${postId}, Index: ${index}`);
+    console.log("[KIE PAYLOAD]", JSON.stringify(body, null, 2));
 
-    // Kie.ai response structure might vary, adjust the videoUrl extraction as appropriate
-    const videoUrl = body?.response?.video_url || body?.output || body?.video_url;
+    // Support multiple Kie.ai response formats: body.data.video_url, body.video_url, body.output, etc.
+    const videoUrl = body?.data?.video_url || body?.response?.video_url || body?.output || body?.video_url;
     
     if (!videoUrl) {
-      console.error("No video URL found in Kie.ai callback.");
-      return NextResponse.json({ error: "No video returned" }, { status: 400 });
+      console.error("[KIE WEBHOOK ERROR] No video URL found in payload. Check logs for structure.");
+      return NextResponse.json({ error: "No video returned", received: body }, { status: 400 });
     }
 
     // Initialize Supabase admin client (Service Role is needed because Webhooks are unauthenticated)
@@ -55,15 +56,22 @@ export async function POST(req: Request) {
     const newCompleted = assets.completed + 1;
     const updatedAssets = { ...assets, urls, completed: newCompleted };
 
+    const serializedAssets = JSON.parse(JSON.stringify(updatedAssets));
     const { error: updateErr } = await supabaseAdmin
       .from('property_marketing_posts')
-      .update({ motion_assets: updatedAssets })
+      .update({ motion_assets: serializedAssets })
       .eq('id', postId);
 
     if (updateErr) {
-      console.error("Failed to update post assets", updateErr);
-      return NextResponse.json({ error: "DB error" }, { status: 500 });
+      console.error(`[KIE WEBHOOK UPDATE FAILED] Post: ${postId}`, updateErr);
+      return NextResponse.json({ 
+        error: "Database update failed", 
+        details: updateErr,
+        hint: "Check if SUPABASE_SERVICE_ROLE_KEY is set in Vercel to bypass RLS." 
+      }, { status: 500 });
     }
+
+    console.log(`[KIE WEBHOOK PROGRESS] Post: ${postId}, Status: ${newCompleted}/${assets.total} videos completed.`);
 
     // Check if ALL videos are done!
     if (newCompleted >= assets.total) {
