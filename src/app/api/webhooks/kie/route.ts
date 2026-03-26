@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
 
     // Support multiple Kie.ai response formats by checking all common fields
-    const videoUrl = 
+    let videoUrl = 
       body?.data?.video_url || 
       body?.video_url || 
       body?.data?.url || 
@@ -57,6 +57,16 @@ export async function POST(req: Request) {
       body?.output_url ||
       (body?.data && typeof body.data === 'string' && body.data.startsWith('http') ? body.data : null);
     
+    // Hailuo specific: the video URL is often hidden inside a stringified JSON property
+    if (!videoUrl && body?.data?.resultJson) {
+      try {
+        const parsedResult = JSON.parse(body.data.resultJson);
+        if (parsedResult.resultUrls && parsedResult.resultUrls.length > 0) {
+          videoUrl = parsedResult.resultUrls[0];
+        }
+      } catch (e) {}
+    }
+
     if (!videoUrl) {
       await supabaseAdmin.from('webhook_logs').insert({ source: 'kie.ai-error', post_id: postId, error_msg: "No video URL found", payload: body });
       console.error("[KIE WEBHOOK ERROR] No video URL found in payload. Structure:", JSON.stringify(body));
