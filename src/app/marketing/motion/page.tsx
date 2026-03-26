@@ -137,10 +137,13 @@ export default function MotionStudioWizard() {
           const blob = await getCroppedBlob(selectedImages[i], aspectRatio);
           if (blob.size === 0) continue; // Skip invalid images
           const path = `motion/${user.id}/${Date.now()}-${i}.jpg`;
-          const { error } = await supabase.storage.from("media").upload(path, blob, { upsert: true });
+          const { error } = await supabase.storage.from("property_images").upload(path, blob, { upsert: true });
           if (!error) {
-            const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(path);
+            const { data: { publicUrl } } = supabase.storage.from("property_images").getPublicUrl(path);
             uploadedUrls.push(publicUrl);
+          } else {
+            console.error("Storage upload error:", error);
+            throw new Error(`Upload failed for image ${i}: ${error.message}`);
           }
         }
 
@@ -180,14 +183,17 @@ export default function MotionStudioWizard() {
           })
         });
 
-        if (!res.ok) throw new Error("Dispatch failed");
+        if (!res.ok) {
+           const errText = await res.text();
+           throw new Error(`Dispatch API error: ${res.status} ${errText}`);
+        }
 
         setSuccess(true);
         setTimeout(() => { router.push("/marketing"); }, 2000);
 
-      } catch (err) {
-        console.error(err);
-        alert("Something went wrong");
+      } catch (err: any) {
+        console.error("Studio Pipeline Error:", err);
+        alert(err.message || "Something went wrong during generation!");
       } finally {
         setIsGenerating(false);
       }
