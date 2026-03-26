@@ -6,6 +6,7 @@ import { BasicInfoStep } from "@/components/wizard/steps/agent/BasicInfoStep";
 import { BrandStyleStep } from "@/components/wizard/steps/agent/BrandStyleStep";
 import { AgentA2PStep } from "@/components/wizard/steps/agent/AgentA2PStep";
 import { BrokerA2PStep } from "@/components/wizard/steps/agent/BrokerA2PStep";
+import { BufferSetupStep } from "@/components/wizard/steps/agent/BufferSetupStep";
 import { OnboardingProvider, useOnboarding } from "@/components/wizard/steps/agent/OnboardingContext";
 import { createClient } from "@/supabase/client";
 
@@ -15,6 +16,7 @@ const STEPS = [
   { title: "Basic Info & Brokerage" },
   { title: "Style & Brand" },
   { title: "A2P 10DLC Compliance" },
+  { title: "Social Integrations" },
 ];
 
 function WizardContent() {
@@ -107,6 +109,7 @@ function WizardContent() {
           bio: data.professionalBio,
           avatar_url: data.avatarUrl || null,
           role: "AGENT",
+          buffer_access_token: data.bufferAccessToken || null,
           // Agent A2P fields
           ...(isAgentTier ? {
             a2p_legal_name: data.agentLegalName || null,
@@ -158,6 +161,7 @@ function WizardContent() {
         <BasicInfoStep />
         <BrandStyleStep />
         {a2pStep}
+        <BufferSetupStep />
       </WizardFrame>
       {submitError && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-6 py-3 shadow-xl z-50">

@@ -37,18 +37,18 @@ export function WizardFrame({
   return (
     <div className="flex flex-col h-full w-full max-w-4xl mx-auto px-4 md:px-10 py-8 relative">
       <header className="flex flex-col gap-3 mb-8">
-        <div className="flex justify-between items-end gap-6">
+        <div className="flex justify-between items-start gap-6">
           <div className="flex flex-col">
             <span className="text-cyan text-xs font-bold uppercase tracking-widest">{title}</span>
             <p className="text-2xl font-bold font-display">Step {safeStep + 1} of {steps.length}</p>
           </div>
           <div className="flex items-center gap-4">
-            <p className="text-slate-400 text-sm font-medium">{Math.round(progressPercent)}% Complete</p>
+            <p className="text-slate-400 text-sm font-medium mt-2">{Math.round(progressPercent)}% Complete</p>
             {onEscape && (
               <button
                 onClick={onEscape}
-                title="Save draft or discard"
-                className="w-8 h-8 rounded-full border border-slate-700 flex items-center justify-center text-slate-400 hover:border-red-400/60 hover:text-red-400 transition-all"
+                title="Cancel and Exit Studio"
+                className="w-8 h-8 rounded-full bg-onyx-surface border border-[#30363D] flex items-center justify-center text-slate-400 hover:border-red-500/50 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer shadow-lg"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
@@ -70,7 +70,7 @@ export function WizardFrame({
       </header>
 
       {/* Main Content Area with Sliding Transitions */}
-      <div className="flex-1 relative overflow-hidden min-h-[400px]">
+      <div className="flex-1 relative overflow-x-hidden overflow-y-visible min-h-[400px] px-8 -mx-8 pt-4 -mt-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={safeStep}

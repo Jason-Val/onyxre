@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { WizardFrame } from "@/components/wizard/WizardFrame";
 import { createClient } from "@/supabase/client";
+import { useRouter } from "next/navigation";
 
 const STEPS = [
   { title: "Select Property" },
@@ -14,6 +15,7 @@ const STEPS = [
 export default function StaticStudioWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const supabase = createClient();
+  const router = useRouter();
 
   // Step 1 State
   const [properties, setProperties] = useState<any[]>([]);
@@ -186,6 +188,7 @@ export default function StaticStudioWizard() {
         currentStep={currentStep}
         onNext={handleNext}
         onPrev={handlePrev}
+        onEscape={() => router.push('/marketing')}
         nextLabel={currentStep === 3 ? "Schedule Post" : "Continue"}
         isNextDisabled={(currentStep === 0 && selectedPropertyId === 'new' && !customAddress.trim()) || isGenerating || isScheduling}
       >

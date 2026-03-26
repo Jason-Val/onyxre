@@ -57,6 +57,8 @@ type Post = {
   platforms: string[];
   property_id: string | null;
   created_at?: string;
+  status: string;
+  motion_assets?: { total: number; completed: number; urls: string[] };
 };
 
 const STATUSES = ["ACTIVE", "PENDING", "SOLD", "WITHDRAWN"];
@@ -131,7 +133,7 @@ export default function PropertyDetailPage() {
           .eq("property_id", id)
           .order("created_at", { ascending: false }),
         supabase.from("property_marketing_posts")
-          .select("id,image_url,caption,scheduled_at,platforms,property_id,created_at")
+          .select("id,image_url,caption,scheduled_at,platforms,property_id,created_at,status,motion_assets")
           .eq("property_id", id)
           .order("scheduled_at", { ascending: false }),
       ]);
@@ -663,10 +665,27 @@ export default function PropertyDetailPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {posts.map(post => (
-                       <div key={post.id} onClick={() => setEditingPost(post)} className="bg-onyx rounded-xl border border-[#27373a] overflow-hidden group hover:border-cyan/50 transition-all cursor-pointer flex flex-col">
-                         <div className="h-40 bg-black relative">
-                            <img src={post.image_url} alt="Post" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-3">
+                       <div key={post.id} onClick={() => { if (post.status !== 'generating') setEditingPost(post) }} className={`bg-onyx rounded-xl border flex flex-col overflow-hidden transition-all ${post.status === 'generating' ? 'border-cyan border-dashed opacity-80 cursor-wait' : 'border-[#27373a] hover:border-cyan/50 cursor-pointer group'}`}>
+                         <div className="h-40 bg-black relative flex items-center justify-center">
+                            {post.status === 'generating' ? (
+                               <div className="flex flex-col items-center text-cyan gap-2">
+                                  <span className="material-symbols-outlined text-4xl animate-spin">autorenew</span>
+                                  <span className="text-xs font-bold uppercase tracking-widest">Generating Video...</span>
+                               </div>
+                            ) : (
+                               <>
+                                 <img src={post.image_url} alt="Post" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                 {/* Optional Video Play Icon */}
+                                 {post.image_url?.includes("creatomate") && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <div className="w-12 h-12 bg-black/60 backdrop-blur rounded-full flex items-center justify-center border border-white/20">
+                                         <span className="material-symbols-outlined text-white text-2xl ml-1">play_arrow</span>
+                                      </div>
+                                    </div>
+                                 )}
+                               </>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-3 pointer-events-none">
                                <div className="flex gap-1">
                                   {post.platforms.map(p => (
                                      <span key={p} className="bg-black/50 backdrop-blur text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-md border border-white/10">{p}</span>
@@ -677,9 +696,14 @@ export default function PropertyDetailPage() {
                          <div className="p-4 flex flex-col flex-1 gap-2">
                            <div className="flex items-center justify-between text-xs font-bold">
                              <span className="text-slate-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">calendar_month</span> {new Date(post.scheduled_at).toLocaleDateString()}</span>
-                             <span className="text-emerald-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">schedule</span> {new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                             <span className={`${post.status === 'generating' ? 'text-amber-400' : 'text-emerald-400'} flex items-center gap-1.5`}><span className="material-symbols-outlined text-[14px]">schedule</span> {post.status === 'generating' ? 'Drafting...' : new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                            </div>
                            <p className="text-slate-300 text-xs line-clamp-3 leading-relaxed opacity-80">{post.caption || "No caption provided."}</p>
+                           {post.status === 'generating' && post.motion_assets && (
+                             <div className="mt-2 w-full bg-[#161B26] rounded-full h-1">
+                               <div className="bg-cyan h-1 rounded-full transition-all duration-500" style={{ width: `${(post.motion_assets.completed / post.motion_assets.total) * 100}%` }} />
+                             </div>
+                           )}
                          </div>
                        </div>
                     ))}

@@ -29,7 +29,7 @@ export async function POST(req: Request) {
         Features: ${propertyData?.features || "Amazing amenities"}
 
         Tone: Luxurious, urgent, modern, but refined.
-        Include a call to action to "tap the link in bio for the 3D tour".
+        Include a call to action to "link in bio for more info".
         Add 3-5 relevant hashtags.
         Return ONLY the textual caption. Do not include markdown formatting or quotation marks around the entire response.
       `;

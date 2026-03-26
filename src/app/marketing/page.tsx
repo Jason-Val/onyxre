@@ -14,7 +14,7 @@ export default function MarketingManagerPage() {
       <section className="space-y-4">
         <h2 className="text-xl font-bold border-b border-[#27373a] pb-2 text-cyan">Content Studios</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* Static Studio */}
           <Link href="/marketing/static" className="group">
             <div className="bg-onyx-surface border border-[#27373a] rounded-xl p-8 hover:border-cyan/50 hover:shadow-[0_0_20px_rgba(0,209,255,0.1)] transition-all flex flex-col items-center text-center gap-4 h-full relative overflow-hidden">
@@ -24,7 +24,7 @@ export default function MarketingManagerPage() {
               </div>
               <div className="z-10">
                 <h3 className="text-2xl font-bold text-white mb-2">Static Studio</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">Orshot Engine. Generate beautiful static image templates with Anthropic-optimized copy.</p>
+                <p className="text-slate-400 text-sm leading-relaxed">Generate beautiful static image posts with AI-optimized copy.</p>
               </div>
               <span className="mt-auto inline-flex items-center gap-1.5 text-cyan font-bold uppercase tracking-widest text-[11px] group-hover:bg-cyan/10 px-4 py-2 rounded-full transition-all z-10 border border-transparent group-hover:border-cyan/30">
                 Launch Studio <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
@@ -41,14 +41,14 @@ export default function MarketingManagerPage() {
               </div>
               <div className="z-10">
                 <h3 className="text-2xl font-bold text-white mb-2">Motion Studio</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">Kie.ai + Remotion Engine. Turn 5 photos into cinematic, music-synced reels with branding overlays.</p>
+                <p className="text-slate-400 text-sm leading-relaxed">Turn 3 photos into cinematic reels with branding overlays and AI-Optimized copy</p>
               </div>
               <span className="mt-auto inline-flex items-center gap-1.5 text-indigo-400 font-bold uppercase tracking-widest text-[11px] group-hover:bg-indigo-500/10 px-4 py-2 rounded-full transition-all z-10 border border-transparent group-hover:border-indigo-500/30">
                 Launch Studio <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
               </span>
             </div>
           </Link>
-          
+
         </div>
       </section>
 
@@ -58,9 +58,9 @@ export default function MarketingManagerPage() {
           <span className="material-symbols-outlined text-slate-500">calendar_month</span> Scheduled Posts (Buffer)
         </h2>
         <div className="bg-onyx-surface border border-[#27373a] rounded-xl overflow-hidden shadow-xl">
-           <ScheduleRow platform="Instagram" type="Reel" content="123 Maple St - Cinematic Fly-through" date="Today, 2:00 PM" status="Pending" icon="photo_camera" />
-           <ScheduleRow platform="Facebook" type="Post" content="Market Update - Q3 Beverly Hills" date="Tomorrow, 9:00 AM" status="Scheduled" icon="public" />
-           <ScheduleRow platform="LinkedIn" type="Article" content="Why now is the time to sell..." date="Fri, Oct 12, 11:30 AM" status="Scheduled" icon="work" />
+          <ScheduleRow platform="Instagram" type="Reel" content="123 Maple St - Cinematic Fly-through" date="Today, 2:00 PM" status="Pending" icon="photo_camera" />
+          <ScheduleRow platform="Facebook" type="Post" content="Market Update - Q3 Beverly Hills" date="Tomorrow, 9:00 AM" status="Scheduled" icon="public" />
+          <ScheduleRow platform="LinkedIn" type="Article" content="Why now is the time to sell..." date="Fri, Oct 12, 11:30 AM" status="Scheduled" icon="work" />
         </div>
       </section>
     </div>
@@ -72,7 +72,7 @@ function ScheduleRow({ platform, type, content, date, status, icon }: { platform
     <div className="flex flex-col md:flex-row md:items-center gap-4 p-5 py-4 border-b border-[#27373a] last:border-0 hover:bg-[#1a2029] transition-colors cursor-pointer group">
       <div className="flex items-center gap-4 flex-1">
         <div className="size-10 shrink-0 rounded bg-onyx border border-[#27373a] flex items-center justify-center text-slate-400 group-hover:text-cyan group-hover:border-cyan/50 transition-colors">
-           <span className="material-symbols-outlined text-xl">{icon}</span>
+          <span className="material-symbols-outlined text-xl">{icon}</span>
         </div>
         <div className="flex flex-col">
           <div className="flex items-center gap-2">

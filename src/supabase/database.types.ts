@@ -225,6 +225,7 @@ export type Database = {
           a2p_legal_name: string | null
           avatar_url: string | null
           bio: string | null
+          buffer_access_token: string | null
           created_at: string
           first_name: string | null
           id: string
@@ -240,6 +241,7 @@ export type Database = {
           a2p_legal_name?: string | null
           avatar_url?: string | null
           bio?: string | null
+          buffer_access_token?: string | null
           created_at?: string
           first_name?: string | null
           id: string
@@ -255,6 +257,7 @@ export type Database = {
           a2p_legal_name?: string | null
           avatar_url?: string | null
           bio?: string | null
+          buffer_access_token?: string | null
           created_at?: string
           first_name?: string | null
           id?: string
@@ -401,6 +404,7 @@ export type Database = {
           created_at: string | null
           id: string
           image_url: string
+          motion_assets: Json | null
           platforms: string[]
           property_id: string | null
           scheduled_at: string | null
@@ -413,6 +417,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url: string
+          motion_assets?: Json | null
           platforms: string[]
           property_id?: string | null
           scheduled_at?: string | null
@@ -425,6 +430,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           image_url?: string
+          motion_assets?: Json | null
           platforms?: string[]
           property_id?: string | null
           scheduled_at?: string | null

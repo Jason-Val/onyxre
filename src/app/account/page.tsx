@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/supabase/client";
 import { motion } from "framer-motion";
 
-type Section = "profile" | "brand" | "subscription" | "a2p";
+type Section = "profile" | "brand" | "subscription" | "a2p" | "integrations";
 
 const PLANS = ["Free Agent", "Junior Agent", "Senior Agent", "Broker"];
 const VISUAL_DNA = ["Modern", "Luxury", "Bold", "Minimalist"];
@@ -24,6 +24,7 @@ export default function AccountPage() {
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [commissionSplit, setCommissionSplit] = useState("");
+  const [bufferAccessToken, setBufferAccessToken] = useState("");
 
   // Brand state
   const [brokerageName, setBrokerageName] = useState("");
@@ -51,7 +52,7 @@ export default function AccountPage() {
       setUserId(user.id);
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, last_name, license_number, bio, avatar_url, organization_id")
+        .select("first_name, last_name, license_number, bio, avatar_url, organization_id, buffer_access_token")
         .eq("id", user.id)
         .single();
       if (profile) {
@@ -60,6 +61,7 @@ export default function AccountPage() {
         setLicenseNumber(profile.license_number ?? "");
         setBio(profile.bio ?? "");
         setAvatarUrl(profile.avatar_url ?? "");
+        setBufferAccessToken(profile.buffer_access_token ?? "");
         setOrgId(profile.organization_id ?? null);
       }
       if (profile?.organization_id) {
@@ -108,6 +110,7 @@ export default function AccountPage() {
         license_number: licenseNumber,
         bio,
         avatar_url: avatarUrl || null,
+        buffer_access_token: bufferAccessToken || null,
       }).eq("id", user.id);
 
       if (orgId) {
@@ -136,6 +139,7 @@ export default function AccountPage() {
     { key: "brand", label: "Brand & Brokerage", icon: "palette" },
     { key: "subscription", label: "Subscription", icon: "star" },
     { key: "a2p", label: "A2P Registration", icon: "verified_user" },
+    { key: "integrations", label: "Integrations", icon: "hub" },
   ];
 
   return (
@@ -352,10 +356,44 @@ export default function AccountPage() {
                 )}
               </>
             )}
+
+            {/* ── Integrations ── */}
+            {activeSection === "integrations" && (
+              <>
+                <SectionHeader title="Integrations & APIs" subtitle="Connect external services to OnyxRE." />
+                
+                <div className="bg-[#161B26] border border-[#30363D] rounded-2xl p-6 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-inner">
+                       {/* Buffer icon placeholder */}
+                       <span className="material-symbols-outlined text-black text-2xl">layers</span>
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold">Buffer Social Scheduling</h3>
+                      <p className="text-slate-400 text-xs">Automatically publish AI-generated posts to your connected social accounts.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 mt-2">
+                    <label className="text-slate-300 text-sm font-semibold ml-1">Personal Access Token</label>
+                    <input 
+                      type="password" 
+                      value={bufferAccessToken} 
+                      onChange={(e) => setBufferAccessToken(e.target.value)}
+                      placeholder="Enter your Buffer API Token"
+                      className="w-full bg-[#0A0D14] border border-[#30363D] text-slate-100 rounded-xl h-11 px-4 focus:border-cyan outline-none transition-all placeholder:text-slate-600 font-mono text-sm" 
+                    />
+                    <p className="text-slate-500 text-xs ml-1">
+                      You can get this token from your <a href="https://buffer.com" target="_blank" rel="noopener noreferrer" className="text-cyan hover:underline">Buffer Account Settings</a> under Apps & Extras.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </motion.div>
 
           {/* Save / Error */}
-          {(activeSection === "profile" || activeSection === "brand") && (
+          {(activeSection === "profile" || activeSection === "brand" || activeSection === "integrations") && (
             <div className="mt-8 flex items-center gap-4">
               <button onClick={handleSave} disabled={saving}
                 className="px-8 py-3 bg-cyan text-onyx font-bold rounded-xl hover:brightness-110 transition-all disabled:opacity-50 text-sm">

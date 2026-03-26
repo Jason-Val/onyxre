@@ -30,9 +30,15 @@ export async function POST(req: Request) {
       }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
+    let bufferToken = process.env.BUFFER_ACCESS_TOKEN;
     if (user) {
+      const { data: profile } = await supabase.from('profiles').select('buffer_access_token').eq('id', user.id).single();
+      if (profile?.buffer_access_token) {
+        bufferToken = profile.buffer_access_token;
+      }
+
       const { error: dbError } = await supabase
         .from('property_marketing_posts')
         .insert({
@@ -50,16 +56,11 @@ export async function POST(req: Request) {
       }
     }
 
-    const bufferToken = process.env.BUFFER_ACCESS_TOKEN;
-
     if (!bufferToken) {
-      console.warn("Buffer Token missing. Mocking success.");
-      // Mock successfully simulating a Buffer schedule post
+      console.warn("Buffer Token missing. Prompting user to set it.");
       return NextResponse.json({ 
-        success: true, 
-        message: "Post logically scheduled (Mocked - No Buffer Token found)",
-        data: { imageUrl, text, scheduledAt, platforms }
-      });
+        error: "Buffer integration not configured. Please add your Buffer Token in Account Settings.",
+      }, { status: 400 });
     }
 
     // Example actual Buffer integration payload

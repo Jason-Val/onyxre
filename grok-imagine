@@ -1,0 +1,16 @@
+curl --location --request POST 'https: //api.kie.ai/api/v1/jobs/createTask' \
+--header 'Authorization: Bearer <token>' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "model": "grok-imagine/image-to-video",
+    "callBackUrl": "https://your-domain.com/api/callback",
+    "input": {
+        "image_urls": [
+            "cropped-image-url.jpg"
+        ],
+        "prompt": "Template defined",
+        "mode": "normal",
+        "duration": "6",
+        "resolution": "720p"
+    }
+}'

@@ -10,6 +10,8 @@ type Post = {
   scheduled_at: string;
   platforms: string[];
   property_id: string | null;
+  status: string;
+  motion_assets?: any;
 };
 
 export function EditPostModal({ 

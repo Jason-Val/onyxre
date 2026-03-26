@@ -9,10 +9,11 @@ export interface OnboardingData {
   phoneNumber: string;
   brokerageName: string;
   licenseNumber: string;
-  professionalBio: string;
   avatarUrl: string;
+  professionalBio: string;
   logoUrl: string;
   commissionSplit: string;
+  bufferAccessToken: string;
 
   // BrandStyleStep
   visualDna: string;
@@ -49,10 +50,11 @@ export const defaultOnboardingData: OnboardingData = {
   phoneNumber: "",
   brokerageName: "",
   licenseNumber: "",
-  professionalBio: "",
   avatarUrl: "",
+  professionalBio: "",
   logoUrl: "",
   commissionSplit: "",
+  bufferAccessToken: "",
   visualDna: "Modern",
   primaryColor: "#00D1FF",
   secondaryColor: "#475569",
