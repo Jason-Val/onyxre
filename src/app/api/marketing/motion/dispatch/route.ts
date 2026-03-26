@@ -61,18 +61,17 @@ export async function POST(req: Request) {
         const res = await fetch('https://api.kie.ai/api/v1/jobs/createTask', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.KIE_API_KEY || process.env.KIE_AI_GENERATICE_AI_API_KEY}`,
+            'Authorization': `Bearer ${process.env.KIE_AI_GENERATICE_AI_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             model: "hailuo/2-3-image-to-video-standard",
             callBackUrl: callbackUrl,
             input: {
-              image_urls: [url],
               prompt: "A slow, cinematic gimbal push-in shot moving smoothly toward the center of the frame. The camera performs a gentle, micro-arc clockwise rotation around the focal point. High-end real estate videography style, 24fps, perfectly stable motion. Zero morphing. Maintain all original architectural details and furniture exactly as they appear in the static image. No new objects, no hallucinations, no people. Lighting remains static and natural.",
-              mode: "normal",
+              image_url: url,
               duration: "6",
-              resolution: "768p"
+              resolution: "768P"
             }
           })
         });
