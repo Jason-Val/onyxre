@@ -137,9 +137,9 @@ export default function MotionStudioWizard() {
           const blob = await getCroppedBlob(selectedImages[i], aspectRatio);
           if (blob.size === 0) continue; // Skip invalid images
           const path = `motion/${user.id}/${Date.now()}-${i}.jpg`;
-          const { error } = await supabase.storage.from("property_images").upload(path, blob, { upsert: true });
+          const { error } = await supabase.storage.from("property-images").upload(path, blob, { upsert: true });
           if (!error) {
-            const { data: { publicUrl } } = supabase.storage.from("property_images").getPublicUrl(path);
+            const { data: { publicUrl } } = supabase.storage.from("property-images").getPublicUrl(path);
             uploadedUrls.push(publicUrl);
           } else {
             console.error("Storage upload error:", error);
