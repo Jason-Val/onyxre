@@ -21,11 +21,20 @@ export async function POST(req: Request) {
     console.log(`[KIE WEBHOOK HIT] Post: ${postId}, Index: ${index}`);
     console.log("[KIE PAYLOAD]", JSON.stringify(body, null, 2));
 
-    // Support multiple Kie.ai response formats: body.data.video_url, body.video_url, body.output, etc.
-    const videoUrl = body?.data?.video_url || body?.response?.video_url || body?.output || body?.video_url;
+    // Support multiple Kie.ai response formats by checking all common fields
+    const videoUrl = 
+      body?.data?.video_url || 
+      body?.video_url || 
+      body?.data?.url || 
+      body?.url || 
+      body?.output || 
+      body?.response?.video_url ||
+      body?.data?.output_url ||
+      body?.output_url ||
+      (body?.data && typeof body.data === 'string' && body.data.startsWith('http') ? body.data : null);
     
     if (!videoUrl) {
-      console.error("[KIE WEBHOOK ERROR] No video URL found in payload. Check logs for structure.");
+      console.error("[KIE WEBHOOK ERROR] No video URL found in payload. Structure:", JSON.stringify(body));
       return NextResponse.json({ error: "No video returned", received: body }, { status: 400 });
     }
 
