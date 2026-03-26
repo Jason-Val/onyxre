@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       return fetch('https://api.kie.ai/api/v1/jobs/createTask', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.KIE_API_KEY}`,
+          'Authorization': `Bearer ${process.env.KIE_API_KEY || process.env.KIE_AI_GENERATICE_AI_API_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -85,6 +85,9 @@ export async function POST(req: Request) {
     const failed = responses.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok));
     if (failed.length > 0) {
        console.error("Some Kie.ai dispatch requests failed to queue.");
+       if (failed.length === kiePromises.length) {
+          return NextResponse.json({ error: "Kie.ai API rejected the generation requests. Check API keys and quotas." }, { status: 502 });
+       }
     }
 
     return NextResponse.json({ 

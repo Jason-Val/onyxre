@@ -1,8 +1,68 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/supabase/client";
+
+type Post = {
+  id: string;
+  image_url: string;
+  caption: string;
+  scheduled_at: string;
+  platforms: string[];
+  property_id: string | null;
+  created_at?: string;
+  status: string;
+  motion_assets?: { total: number; completed: number; urls: string[] };
+};
 
 export default function MarketingManagerPage() {
+  const supabase = createClient();
+  const [posts, setPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    async function fetchPosts() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('property_marketing_posts')
+        .select('*')
+        .eq('agent_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (data) setPosts(data as unknown as Post[]);
+    }
+    
+    fetchPosts();
+
+    // Set up realtime subscription to listen for webhook updates
+    const channel = supabase.channel('marketing_posts_updates')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'property_marketing_posts' },
+        (payload) => {
+          setPosts(prev => prev.map(p => p.id === payload.new.id ? payload.new as unknown as Post : p));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'property_marketing_posts' },
+        (payload) => {
+          setPosts(prev => [payload.new as unknown as Post, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  // Filter posts into categories
+  const generatingPosts = posts.filter(p => p.status === 'generating');
+  const scheduledPosts = posts.filter(p => p.status !== 'generating');
+
   return (
     <div className="w-full max-w-[1200px] mx-auto px-6 md:px-10 py-10 space-y-10 pb-20">
       <header className="flex flex-col gap-2">
@@ -52,16 +112,81 @@ export default function MarketingManagerPage() {
         </div>
       </section>
 
-      {/* Buffer Schedule */}
+      {/* Realtime In-Progress Generation Cards */}
+      {generatingPosts.length > 0 && (
+        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+           <h2 className="text-xl font-bold border-b border-cyan/30 pb-2 text-cyan flex items-center gap-2">
+             <span className="material-symbols-outlined text-cyan motion-safe:animate-spin">autorenew</span> Active Rendering Jobs
+           </h2>
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+             {generatingPosts.map(post => (
+                <div key={post.id} className="bg-onyx rounded-xl border border-cyan border-dashed opacity-80 cursor-wait flex flex-col overflow-hidden transition-all shadow-[0_0_15px_rgba(0,209,255,0.1)]">
+                  <div className="h-40 bg-black relative flex items-center justify-center">
+                    <div className="flex flex-col items-center text-cyan gap-2">
+                      <span className="material-symbols-outlined text-4xl animate-spin">autorenew</span>
+                      <span className="text-xs font-bold uppercase tracking-widest">Generating Video...</span>
+                    </div>
+                  </div>
+                  <div className="p-4 flex flex-col flex-1 gap-2">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">calendar_month</span> {new Date(post.scheduled_at).toLocaleDateString()}</span>
+                      <span className="text-amber-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">schedule</span> Drafting...</span>
+                    </div>
+                    <p className="text-slate-300 text-xs line-clamp-3 leading-relaxed opacity-80">{post.caption || "No caption provided."}</p>
+                    {post.motion_assets && (
+                      <div className="mt-2 w-full bg-[#161B26] rounded-full h-1 overflow-hidden">
+                        <div className="bg-cyan h-1 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(0,209,255,0.8)]" style={{ width: `${(post.motion_assets.completed / Math.max(post.motion_assets.total, 1)) * 100}%` }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+             ))}
+           </div>
+        </section>
+      )}
+
+      {/* Buffer Schedule / Completed Posts */}
       <section className="space-y-4 pt-4">
         <h2 className="text-xl font-bold border-b border-[#27373a] pb-2 text-white flex items-center gap-2">
-          <span className="material-symbols-outlined text-slate-500">calendar_month</span> Scheduled Posts (Buffer)
+          <span className="material-symbols-outlined text-slate-500">calendar_month</span> Scheduled & Completed Posts
         </h2>
-        <div className="bg-onyx-surface border border-[#27373a] rounded-xl overflow-hidden shadow-xl">
-          <ScheduleRow platform="Instagram" type="Reel" content="123 Maple St - Cinematic Fly-through" date="Today, 2:00 PM" status="Pending" icon="photo_camera" />
-          <ScheduleRow platform="Facebook" type="Post" content="Market Update - Q3 Beverly Hills" date="Tomorrow, 9:00 AM" status="Scheduled" icon="public" />
-          <ScheduleRow platform="LinkedIn" type="Article" content="Why now is the time to sell..." date="Fri, Oct 12, 11:30 AM" status="Scheduled" icon="work" />
-        </div>
+        
+        {scheduledPosts.length === 0 ? (
+          <div className="bg-onyx-surface border border-[#27373a] rounded-xl overflow-hidden shadow-xl">
+             <ScheduleRow platform="Instagram" type="Template" content="Your generated posts will show up here." date="Pending" status="Draft" icon="photo_camera" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {scheduledPosts.map(post => (
+               <div key={post.id} className="bg-onyx rounded-xl border border-[#27373a] hover:border-cyan/50 transition-all flex flex-col overflow-hidden group cursor-pointer">
+                 <div className="h-40 bg-black relative flex items-center justify-center">
+                    <img src={post.image_url} alt="Post" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    {post.image_url?.includes("creatomate.com") && (
+                       <div className="absolute inset-0 flex items-center justify-center">
+                         <div className="w-12 h-12 bg-black/60 backdrop-blur rounded-full flex items-center justify-center border border-white/20 hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-white text-2xl ml-1">play_arrow</span>
+                         </div>
+                       </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-3 pointer-events-none">
+                       <div className="flex gap-1">
+                          {post.platforms.map(p => (
+                             <span key={p} className="bg-black/50 backdrop-blur text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-md border border-white/10">{p}</span>
+                          ))}
+                       </div>
+                    </div>
+                 </div>
+                 <div className="p-4 flex flex-col flex-1 gap-2">
+                   <div className="flex items-center justify-between text-xs font-bold">
+                     <span className="text-slate-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">calendar_month</span> {new Date(post.scheduled_at).toLocaleDateString()}</span>
+                     <span className="text-emerald-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">schedule</span> {new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                   </div>
+                   <p className="text-slate-300 text-xs line-clamp-3 leading-relaxed opacity-80">{post.caption || "No caption provided."}</p>
+                 </div>
+               </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -84,7 +209,7 @@ function ScheduleRow({ platform, type, content, date, status, icon }: { platform
       </div>
       <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto mt-2 md:mt-0">
         <p className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5 uppercase tracking-wide"><span className="material-symbols-outlined text-[14px] text-slate-500">schedule</span> {date}</p>
-        <span className={`text-[10px] uppercase tracking-widest font-black px-3 py-1 bg-onyx border rounded-full ${status === 'Pending' ? 'text-amber-500 border-amber-500/30 shadow-[0_0_5px_rgba(245,158,11,0.2)]' : 'text-cyan border-cyan/30 shadow-[0_0_5px_rgba(0,209,255,0.2)]'}`}>{status}</span>
+        <span className={`text-[10px] uppercase tracking-widest font-black px-3 py-1 bg-onyx border rounded-full ${status === 'Pending' ? 'text-amber-500 border-amber-500/30' : 'text-slate-400 border-slate-700'}`}>{status}</span>
       </div>
     </div>
   )
