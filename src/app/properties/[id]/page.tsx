@@ -674,10 +674,14 @@ export default function PropertyDetailPage() {
                                </div>
                             ) : (
                                <>
-                                 <img src={post.image_url} alt="Post" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                 {post.image_url?.toLowerCase().endsWith('.mp4') || post.image_url?.includes("creatomate") ? (
+                                    <video src={post.image_url} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                 ) : (
+                                    <img src={post.image_url} alt="Post" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                 )}
                                  {/* Optional Video Play Icon */}
-                                 {post.image_url?.includes("creatomate") && (
-                                    <div className="absolute inset-0 flex items-center justify-center">
+                                 {(post.image_url?.toLowerCase().endsWith('.mp4') || post.image_url?.includes("creatomate")) && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                       <div className="w-12 h-12 bg-black/60 backdrop-blur rounded-full flex items-center justify-center border border-white/20">
                                          <span className="material-symbols-outlined text-white text-2xl ml-1">play_arrow</span>
                                       </div>

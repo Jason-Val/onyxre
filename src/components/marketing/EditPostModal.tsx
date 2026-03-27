@@ -115,7 +115,11 @@ export function EditPostModal({
         <div className="p-8 flex flex-col lg:flex-row gap-8 overflow-y-auto max-h-[70vh]">
           {/* Preview */}
           <div className="w-[320px] shrink-0 self-start bg-onyx rounded-xl border border-[#27373a] flex flex-col overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-            <img src={post.image_url} alt="Preview" className="w-full h-auto object-cover" />
+            {post.image_url?.toLowerCase().endsWith('.mp4') || post.image_url?.includes("creatomate") ? (
+               <video src={post.image_url} autoPlay loop muted playsInline className="w-full h-auto object-cover" />
+            ) : (
+               <img src={post.image_url} alt="Preview" className="w-full h-auto object-cover" />
+            )}
           </div>
           
           <div className="flex-1 flex flex-col gap-4">
