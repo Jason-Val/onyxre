@@ -61,7 +61,11 @@ export default function MarketingManagerPage() {
 
   // Filter posts into categories
   const generatingPosts = posts.filter(p => p.status === 'generating');
-  const scheduledPosts = posts.filter(p => p.status !== 'generating');
+  const scheduledPosts = posts.filter(p => {
+    if (p.status === 'generating') return false;
+    if (p.scheduled_at && new Date(p.scheduled_at) < new Date()) return false;
+    return true;
+  });
 
   return (
     <div className="w-full max-w-[1200px] mx-auto px-6 md:px-10 py-10 space-y-10 pb-20">
@@ -129,7 +133,10 @@ export default function MarketingManagerPage() {
                   </div>
                   <div className="p-4 flex flex-col flex-1 gap-2">
                     <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-slate-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">calendar_month</span> {new Date(post.scheduled_at).toLocaleDateString()}</span>
+                      <span className="text-slate-400 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[14px]">calendar_month</span> 
+                        {post.scheduled_at ? new Date(post.scheduled_at).toLocaleDateString() : "Unscheduled"}
+                      </span>
                       <span className="text-amber-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">schedule</span> Drafting...</span>
                     </div>
                     <p className="text-slate-300 text-xs line-clamp-3 leading-relaxed opacity-80">{post.caption || "No caption provided."}</p>
@@ -160,10 +167,14 @@ export default function MarketingManagerPage() {
             {scheduledPosts.map(post => (
                <div key={post.id} className="bg-onyx rounded-xl border border-[#27373a] hover:border-cyan/50 transition-all flex flex-col overflow-hidden group cursor-pointer">
                  <div className="h-40 bg-black relative flex items-center justify-center">
-                    <img src={post.image_url} alt="Post" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                    {post.image_url?.includes("creatomate.com") && (
-                       <div className="absolute inset-0 flex items-center justify-center">
-                         <div className="w-12 h-12 bg-black/60 backdrop-blur rounded-full flex items-center justify-center border border-white/20 hover:scale-110 transition-transform">
+                    {post.image_url?.toLowerCase().endsWith('.mp4') || post.image_url?.includes("creatomate.com") ? (
+                       <video src={post.image_url} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    ) : (
+                       <img src={post.image_url} alt="Post" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    )}
+                    {(post.image_url?.toLowerCase().endsWith('.mp4') || post.image_url?.includes("creatomate.com")) && (
+                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                         <div className="w-12 h-12 bg-black/60 backdrop-blur rounded-full flex items-center justify-center border border-white/20 group-hover:scale-110 transition-transform">
                             <span className="material-symbols-outlined text-white text-2xl ml-1">play_arrow</span>
                          </div>
                        </div>
@@ -178,8 +189,14 @@ export default function MarketingManagerPage() {
                  </div>
                  <div className="p-4 flex flex-col flex-1 gap-2">
                    <div className="flex items-center justify-between text-xs font-bold">
-                     <span className="text-slate-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">calendar_month</span> {new Date(post.scheduled_at).toLocaleDateString()}</span>
-                     <span className="text-emerald-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">schedule</span> {new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                     <span className="text-slate-400 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                        {post.scheduled_at ? new Date(post.scheduled_at).toLocaleDateString() : "Unscheduled"}
+                     </span>
+                     <span className={post.scheduled_at ? "text-emerald-400 flex items-center gap-1.5" : "text-amber-400 flex items-center gap-1.5"}>
+                        <span className="material-symbols-outlined text-[14px]">{post.scheduled_at ? "schedule" : "edit_calendar"}</span>
+                        {post.scheduled_at ? new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Click to Schedule"}
+                     </span>
                    </div>
                    <p className="text-slate-300 text-xs line-clamp-3 leading-relaxed opacity-80">{post.caption || "No caption provided."}</p>
                  </div>

@@ -13,6 +13,8 @@ type Property = {
   price: number | null;
   status: string;
   thumbnail_url: string | null;
+  page_views: number;
+  property_marketing_posts?: { id: string }[];
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -36,11 +38,11 @@ export default function PropertyManagerPage() {
 
       const { data, error } = await supabase
         .from("properties")
-        .select("id, address_line1, city, state, zip_code, price, status, thumbnail_url")
+        .select("id, address_line1, city, state, zip_code, price, status, thumbnail_url, page_views, property_marketing_posts(id)")
         .eq("agent_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (!error && data) setProperties(data);
+      if (!error && data) setProperties(data as any);
       setLoading(false);
     }
     load();
@@ -113,8 +115,11 @@ function PropertyCard({ property }: { property: Property }) {
     ? `/properties/new?propertyId=${property.id}`
     : `/properties/${property.id}`;
 
-  // Marketing health is static for now
-  const health = status === "ACTIVE" ? 72 : status === "PENDING" ? 91 : 55;
+  // Marketing Health Calculation
+  const postCount = property.property_marketing_posts?.length || 0;
+  const healthFromPosts = Math.min(postCount * 20, 80);
+  const healthFromViews = Math.min(property.page_views || 0, 20);
+  const health = healthFromPosts + healthFromViews;
 
   return (
     <Link

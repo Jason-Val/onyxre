@@ -7,6 +7,8 @@ export async function PUT(req: Request) {
   try {
     const { 
       postId,
+      propertyId,
+      imageUrl,
       caption, 
       scheduledAt, 
       platforms 
@@ -39,21 +41,45 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
-      .from('property_marketing_posts')
-      .update({
-         caption,
-         scheduled_at: scheduledAt,
-         platforms
-      })
-      .eq('id', postId)
-      .eq('agent_id', user.id)
-      .select()
-      .single();
+    let data, error;
+
+    if (postId === "new") {
+      // Create a brand new post
+      const res = await supabase
+        .from('property_marketing_posts')
+        .insert({
+           property_id: propertyId,
+           agent_id: user.id,
+           image_url: imageUrl,
+           caption,
+           scheduled_at: scheduledAt,
+           platforms,
+           status: 'draft'
+        })
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    } else {
+      // Update existing post
+      const res = await supabase
+        .from('property_marketing_posts')
+        .update({
+           caption,
+           scheduled_at: scheduledAt,
+           platforms
+        })
+        .eq('id', postId)
+        .eq('agent_id', user.id)
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    }
       
     if (error) {
       console.error(error);
-      return NextResponse.json({ error: "Failed to update post" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to update/create post" }, { status: 500 });
     }
 
     // Optionally you would re-push to Buffer API here

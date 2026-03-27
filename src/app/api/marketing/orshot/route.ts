@@ -14,7 +14,8 @@ export async function POST(req: Request) {
       bedrooms = "",
       bathrooms = "",
       sq_ft = "",
-      propertyImage = "https://placehold.co/800x800/222/999?text=Replace%20Image"
+      propertyImage = "https://placehold.co/800x800/222/999?text=Replace%20Image",
+      propertyId = null
     } = body;
 
     // Get Auth and user details
@@ -174,7 +175,22 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json();
-    return NextResponse.json({ success: true, url: data.data ? data.data.content : data.content || data.url });
+    const finalUrl = data.data ? data.data.content : data.content || data.url;
+
+    // Create the media_assets entry!
+    if (finalUrl && user) {
+       const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
+       
+       await supabase.from('media_assets').insert({
+         property_id: propertyId,
+         agent_id: user.id,
+         organization_id: profile?.organization_id, 
+         asset_type: 'IMAGE',
+         storage_path: finalUrl
+       });
+    }
+
+    return NextResponse.json({ success: true, url: finalUrl });
 
   } catch (err: any) {
     console.error("Orshot Route Error:", err);

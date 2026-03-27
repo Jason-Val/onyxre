@@ -23,6 +23,7 @@ type Property = {
   thumbnail_url: string | null;
   agent_id: string;
   features: string[];
+  page_views?: number;
 };
 
 type PropertyImage = {
@@ -117,7 +118,7 @@ export default function PropertyDetailPage() {
 
       const [propRes, imgRes, leadsRes, assetsRes, postsRes] = await Promise.all([
         supabase.from("properties")
-          .select("id,address_line1,city,state,zip_code,price,status,bedrooms,bathrooms,sq_ft,year_built,lot_size,description,thumbnail_url,agent_id,features")
+          .select("id,address_line1,city,state,zip_code,price,status,bedrooms,bathrooms,sq_ft,year_built,lot_size,description,thumbnail_url,agent_id,features,page_views")
           .eq("id", id).single(),
         supabase.from("property_images")
           .select("id,url,storage_path,sort_order")
@@ -138,7 +139,7 @@ export default function PropertyDetailPage() {
           .order("scheduled_at", { ascending: false }),
       ]);
 
-      if (propRes.data) setProperty({ ...propRes.data as Property, features: (propRes.data as Property).features ?? [] });
+      if (propRes.data) setProperty({ ...propRes.data as unknown as Property, features: (propRes.data as unknown as Property).features ?? [] });
       if (imgRes.data) setImages(imgRes.data as PropertyImage[]);
       if (leadsRes.data) setLeads(leadsRes.data as Lead[]);
       if (assetsRes.data) setAssets(assetsRes.data as MediaAsset[]);
@@ -310,6 +311,52 @@ export default function PropertyDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-8">
         {/* ── LEFT: Edit form ── */}
         <div className="flex flex-col gap-5">
+          {/* Marketing Health Widget */}
+          <div className="bg-onyx-surface border border-[#27373a] rounded-xl p-5 relative overflow-hidden group shadow-xl">
+             <div className={`absolute top-0 right-0 w-32 h-32 blur-[60px] pointer-events-none transition-all duration-1000 ${
+               Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20) >= 80 ? 'bg-emerald-500/10' : 
+               Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20) >= 40 ? 'bg-amber-500/10' : 'bg-red-500/10'
+             }`} />
+             
+             <div className="flex items-center justify-between mb-4 relative z-10">
+               <div>
+                 <h2 className="text-white font-bold flex items-center gap-2 tracking-tight">
+                    <span className="material-symbols-outlined text-cyan text-xl">monitor_heart</span>
+                    Marketing Health
+                 </h2>
+                 <p className="text-slate-400 text-xs mt-1">Get 80 points from posts, 20 from views.</p>
+               </div>
+               <div className={`text-3xl font-black font-display tracking-tighter ${
+                 Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20) >= 80 ? 'text-emerald-400' : 
+                 Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20) >= 40 ? 'text-amber-400' : 'text-red-400'
+               }`}>
+                 {Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20)}<span className="text-lg text-slate-500">/100</span>
+               </div>
+             </div>
+             
+             <div className="h-2.5 w-full bg-onyx rounded-full overflow-hidden border border-[#27373a] relative z-10">
+               <div
+                  className={`h-full rounded-full transition-all duration-1000 ${
+                    Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20) >= 80 ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : 
+                    Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20) >= 40 ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                  }`}
+                  style={{ width: `${Math.min(posts.length * 20, 80) + Math.min(property.page_views || 0, 20)}%` }}
+               />
+             </div>
+             
+             <div className="flex items-center justify-between mt-4 relative z-10 border-t border-[#27373a] pt-3">
+               <div className="flex flex-col">
+                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">Content Effort</span>
+                 <span className="text-xs font-bold text-white flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px] text-cyan">campaign</span> {Math.min(posts.length * 20, 80)}/80 pts</span>
+               </div>
+               <div className="w-px h-6 bg-[#27373a]" />
+               <div className="flex flex-col">
+                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">Page Traffic</span>
+                 <span className="text-xs font-bold text-white flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px] text-purple-400">visibility</span> {Math.min(property.page_views || 0, 20)}/20 pts</span>
+               </div>
+             </div>
+          </div>
+
           {/* Status */}
           <div className="bg-onyx-surface border border-[#27373a] rounded-xl p-5">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 block">Status</label>
@@ -699,8 +746,24 @@ export default function PropertyDetailPage() {
                          </div>
                          <div className="p-4 flex flex-col flex-1 gap-2">
                            <div className="flex items-center justify-between text-xs font-bold">
-                             <span className="text-slate-400 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">calendar_month</span> {new Date(post.scheduled_at).toLocaleDateString()}</span>
-                             <span className={`${post.status === 'generating' ? 'text-amber-400' : 'text-emerald-400'} flex items-center gap-1.5`}><span className="material-symbols-outlined text-[14px]">schedule</span> {post.status === 'generating' ? 'Drafting...' : new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                             <span className="text-slate-400 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[14px]">calendar_month</span> 
+                                {post.scheduled_at ? new Date(post.scheduled_at).toLocaleDateString() : "Unscheduled"}
+                             </span>
+                             {post.status === 'generating' ? (
+                               <span className="text-amber-400 flex items-center gap-1.5">
+                                  <span className="material-symbols-outlined text-[14px]">schedule</span> Drafting...
+                               </span>
+                             ) : (post.scheduled_at && new Date(post.scheduled_at) < new Date()) ? (
+                               <span className="text-cyan flex items-center gap-1.5 px-2 py-0.5 bg-cyan/10 rounded-md border border-cyan/20">
+                                  <span className="material-symbols-outlined text-[12px]">check_circle</span> Posted
+                               </span>
+                             ) : (
+                               <span className={post.scheduled_at ? "text-emerald-400 flex items-center gap-1.5" : "text-amber-400 flex items-center gap-1.5"}>
+                                  <span className="material-symbols-outlined text-[14px]">{post.scheduled_at ? "schedule" : "edit_calendar"}</span> 
+                                  {post.scheduled_at ? new Date(post.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Click to Schedule"}
+                               </span>
+                             )}
                            </div>
                            <p className="text-slate-300 text-xs line-clamp-3 leading-relaxed opacity-80">{post.caption || "No caption provided."}</p>
                            {post.status === 'generating' && post.motion_assets && (
@@ -725,17 +788,42 @@ export default function PropertyDetailPage() {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {assets.map((asset) => (
-                      <div key={asset.id} className="bg-onyx-surface border border-[#27373a] rounded-xl overflow-hidden group hover:border-cyan/30 transition-all">
-                        <div className="h-28 bg-onyx flex items-center justify-center relative">
-                          <span className="material-symbols-outlined text-4xl text-slate-700">
-                            {asset.asset_type === "VIDEO" ? "movie" : "image"}
-                          </span>
-                          <span className="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full border bg-cyan/10 text-cyan border-cyan/20 uppercase">
+                      <div 
+                        key={asset.id} 
+                        className="bg-onyx-surface border border-[#27373a] rounded-xl overflow-hidden group hover:border-cyan/30 transition-all cursor-pointer"
+                        onClick={() => {
+                           const post = posts.find(p => p.image_url === asset.storage_path);
+                           setEditingPost(post || {
+                               id: 'new',
+                               image_url: asset.storage_path,
+                               caption: '',
+                               scheduled_at: '',
+                               platforms: [],
+                               property_id: id,
+                               status: 'draft'
+                           });
+                        }}
+                      >
+                        <div className="h-28 bg-black relative flex items-center justify-center border-b border-[#27373a]">
+                          {asset.storage_path?.toLowerCase().endsWith('.mp4') || asset.storage_path?.includes("creatomate") ? (
+                             <video src={asset.storage_path} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                          ) : (
+                             <img src={asset.storage_path} alt="Asset" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                          )}
+                          <span className="absolute top-2 left-2 text-[9px] font-bold px-2 py-0.5 rounded-full border bg-black/60 backdrop-blur text-white border-white/20 uppercase tracking-widest z-10">
                             {asset.asset_type}
                           </span>
+                          {(asset.storage_path?.toLowerCase().endsWith('.mp4') || asset.storage_path?.includes("creatomate")) && (
+                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                               <div className="w-8 h-8 bg-black/60 backdrop-blur rounded-full flex items-center justify-center border border-white/20">
+                                  <span className="material-symbols-outlined text-white text-lg ml-0.5">play_arrow</span>
+                               </div>
+                             </div>
+                          )}
                         </div>
-                        <div className="p-3">
-                          <p className="text-slate-500 text-[10px]">{new Date(asset.created_at).toLocaleDateString()}</p>
+                        <div className="p-3 flex items-center justify-between">
+                          <p className="text-slate-500 text-[10px] font-bold flex items-center gap-1.5"><span className="material-symbols-outlined text-[12px]">calendar_month</span> {new Date(asset.created_at).toLocaleDateString()}</p>
+                          <span className="text-cyan text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity underline">Schedule →</span>
                         </div>
                       </div>
                     ))}

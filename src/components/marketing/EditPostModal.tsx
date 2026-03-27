@@ -80,6 +80,8 @@ export function EditPostModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           postId: post.id,
+          propertyId: post.property_id,
+          imageUrl: post.image_url,
           caption,
           scheduledAt: scheduledAtStr,
           platforms: selectedPlatforms
@@ -150,21 +152,35 @@ export function EditPostModal({
           </div>
         </div>
 
-        <div className="p-6 border-t border-[#27373a] bg-onyx flex justify-end gap-4 mt-auto">
-          <button
-            onClick={onClose}
-            className="px-6 py-3 font-bold text-slate-300 hover:text-white transition-colors"
+        <div className="p-6 border-t border-[#27373a] bg-onyx flex items-center justify-between mt-auto">
+          <a
+            href={post.image_url}
+            download
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-6 py-3 font-bold text-slate-300 hover:text-white transition-colors flex items-center gap-2 border border-[#27373a] rounded-xl hover:border-slate-500 bg-onyx-surface shadow-inner"
+            title="Download this generated asset"
           >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!caption || !scheduleDate || !scheduleTime || selectedPlatforms.length === 0 || isSaving}
-            className="bg-cyan text-onyx font-bold rounded-xl px-8 py-3 flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(0,209,255,0.3)]"
-          >
-            <span className="material-symbols-outlined">{isSaving ? 'hourglass_empty' : 'save'}</span>
-            {isSaving ? 'Saving...' : 'Save & Reschedule'}
-          </button>
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            Download Media
+          </a>
+
+          <div className="flex gap-4">
+            <button
+              onClick={onClose}
+              className="px-6 py-3 font-bold text-slate-300 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!caption || !scheduleDate || !scheduleTime || selectedPlatforms.length === 0 || isSaving}
+              className="bg-cyan text-onyx font-bold rounded-xl px-8 py-3 flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(0,209,255,0.3)]"
+            >
+              <span className="material-symbols-outlined">{isSaving ? 'hourglass_empty' : 'save'}</span>
+              {isSaving ? 'Saving...' : 'Save & Reschedule'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

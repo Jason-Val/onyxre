@@ -107,7 +107,8 @@ export default function StaticStudioWizard() {
              bathrooms: propData?.bathrooms?.toString() || '',
              sq_ft: propData?.sq_ft?.toString() || '',
              features: finalFeatures,
-             propertyImage: selectedImage || 'https://placehold.co/800x800/222/999?text=Replace%20Image'
+             propertyImage: selectedImage || 'https://placehold.co/800x800/222/999?text=Replace%20Image',
+             propertyId: selectedPropertyId === "new" ? null : selectedPropertyId
           })
         });
         const data = await res.json();
@@ -125,28 +126,54 @@ export default function StaticStudioWizard() {
     }
 
     if (currentStep === 3) {
-      setIsScheduling(true);
-      try {
-        await fetch('/api/marketing/buffer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            propertyId: selectedPropertyId === "new" ? null : selectedPropertyId,
-            imageUrl: generatedImageUrl,
-            text: caption,
-            scheduledAt: `${scheduleDate}T${scheduleTime}`,
-            platforms: selectedPlatforms
-          })
-        });
-        window.location.href = "/marketing";
-      } catch (err) {
-      } finally {
-        setIsScheduling(false);
-      }
+      await handleSaveDraft();
       return;
     }
 
     setCurrentStep(prev => prev + 1);
+  };
+
+  const handleSaveDraft = async () => {
+    setIsScheduling(true);
+    try {
+      await fetch('/api/marketing/posts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: 'new',
+          propertyId: selectedPropertyId === "new" ? null : selectedPropertyId,
+          imageUrl: generatedImageUrl,
+          caption: caption,
+          scheduledAt: null,
+          platforms: selectedPlatforms
+        })
+      });
+      window.location.href = "/marketing";
+    } catch (err) {
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleSchedule = async () => {
+    setIsScheduling(true);
+    try {
+      await fetch('/api/marketing/buffer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId: selectedPropertyId === "new" ? null : selectedPropertyId,
+          imageUrl: generatedImageUrl,
+          text: caption,
+          scheduledAt: `${scheduleDate}T${scheduleTime}`,
+          platforms: selectedPlatforms
+        })
+      });
+      window.location.href = "/marketing";
+    } catch (err) {
+    } finally {
+      setIsScheduling(false);
+    }
   };
 
   const handlePrev = () => {
@@ -189,7 +216,7 @@ export default function StaticStudioWizard() {
         onNext={handleNext}
         onPrev={handlePrev}
         onEscape={() => router.push('/marketing')}
-        nextLabel={currentStep === 3 ? "Schedule Post" : "Continue"}
+        nextLabel={currentStep === 3 ? "Save Draft" : "Continue"}
         isNextDisabled={(currentStep === 0 && selectedPropertyId === 'new' && !customAddress.trim()) || isGenerating || isScheduling}
       >
         {/* Step 1: Property */}
@@ -343,9 +370,9 @@ export default function StaticStudioWizard() {
                 </div>
                 
                 <button
-                  onClick={handleNext}
+                  onClick={handleSchedule}
                   disabled={!caption || !scheduleDate || !scheduleTime || selectedPlatforms.length === 0 || isScheduling}
-                  className="mt-auto bg-cyan text-onyx font-bold rounded-xl p-4 flex items-center justify-center gap-2 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(0,209,255,0.3)]"
+                  className="mt-auto bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold rounded-xl p-4 flex items-center justify-center gap-2 hover:bg-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(16,185,129,0.1)]"
                 >
                   <span className="material-symbols-outlined">{isScheduling ? 'hourglass_empty' : 'rocket_launch'}</span>
                   {isScheduling ? 'Scheduling...' : 'Finalize & Schedule Post'}

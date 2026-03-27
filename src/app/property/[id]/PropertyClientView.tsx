@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { LeadForm } from "@/app/agent/[id]/LeadForm";
 import { Lightbox } from "@/components/property/Lightbox";
+import { createClient } from "@/supabase/client";
 
 interface PropertyPublic {
   id: string;
@@ -44,6 +45,16 @@ export function PropertyClientView({ property, googleMapsApiKey }: { property: P
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Record page view on initial load
+    const recordView = async () => {
+      const supabase = createClient();
+      await (supabase.rpc as any)('increment_page_view', { prop_id: property.id });
+    };
+    recordView();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const scroll = (direction: "left" | "right") => {
     if (carouselRef.current) {
