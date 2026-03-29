@@ -1,18 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const mockLeads = [
-  { id: 1, name: "Sarah Kendrick", role: "Buyer", heatIndex: "HOT" },
-  { id: 2, name: "Robert Miller", role: "Seller", heatIndex: "WARM" },
-  { id: 3, name: "Julia Huang", role: "Investor", heatIndex: "HOT" },
-  { id: 4, name: "David Chen", role: "Agent", heatIndex: "COLD" },
-  { id: 5, name: "Emily Watson", role: "Buyer", heatIndex: "WARM" },
-  { id: 6, name: "Michael Carter", role: "Seller", heatIndex: "HOT" },
-  { id: 7, name: "Sophia Martinez", role: "Buyer", heatIndex: "COLD" },
-];
+import { createClient } from '@/supabase/client';
+import { useRouter } from 'next/navigation';
 
 const mockProperties = [
   { id: 1, address: "123 Maple St, Beverly Hills, CA", price: "$2,850,000", image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=200&h=150" },
@@ -32,16 +24,72 @@ export default function LaunchCampaignPage() {
   
   // Selection States
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [selectedLeads, setSelectedLeads] = useState<number[]>([]);
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
   const [propertyCampaignSubtype, setPropertyCampaignSubtype] = useState<string | null>(null);
   const [nurtureSubtype, setNurtureSubtype] = useState<string | null>(null);
 
-  const filteredLeads = mockLeads.filter(l => 
-    l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    l.role.toLowerCase().includes(searchQuery.toLowerCase())
+  const [leads, setLeads] = useState<any[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  const supabase = createClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    async function fetchLeads() {
+      const { data } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+      if (data) setLeads(data);
+      setIsLoadingLeads(false);
+    }
+    fetchLeads();
+  }, []);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    let leadIds: string[] = [];
+    
+    if (targetAudience === "All Hot Leads") {
+      leadIds = leads.filter(l => l.heat_index === "HOT").map(l => l.id);
+    } else if (targetAudience.startsWith("Role:")) {
+      const roleMatch = targetAudience.split("Role: ")[1]?.toUpperCase();
+      leadIds = leads.filter(l => l.role?.toUpperCase() === roleMatch || l.type?.toUpperCase() === roleMatch).map(l => l.id);
+    } else {
+      leadIds = selectedLeads;
+    }
+
+    if (leadIds.length === 0) {
+      alert("No leads found matching your criteria.");
+      setIsGenerating(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/ai/generate-campaign', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignType, targetAudience, leadIds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Campaign queued! We scheduled \${data.touchpointsCount} emails.`);
+        router.push('/crm');
+      } else {
+        alert(data.error || "Failed to generate campaign");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate campaign");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const filteredLeads = leads.filter(l => 
+    (l.first_name + " " + (l.last_name || "")).toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (l.role || l.type || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -164,11 +212,16 @@ export default function LaunchCampaignPage() {
           </div>
 
           <button 
-            disabled={!campaignType}
+            disabled={!campaignType || isGenerating}
+            onClick={handleGenerate}
             className="w-full py-4 bg-cyan text-[#0B0E14] font-black uppercase tracking-widest rounded-xl hover:brightness-110 transition-all shadow-[0_0_20px_rgba(0,209,255,0.3)] hover:-translate-y-1 flex items-center justify-center gap-2 mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:-translate-y-0 disabled:hover:brightness-100"
           >
-            <span className="material-symbols-outlined">rocket_launch</span>
-            Generate Campaign
+            {isGenerating ? (
+              <span className="material-symbols-outlined animate-spin">sync</span>
+            ) : (
+              <span className="material-symbols-outlined">rocket_launch</span>
+            )}
+            {isGenerating ? "Generating..." : "Generate Campaign"}
           </button>
           <p className="text-center text-[10px] text-slate-500 mt-2 flex items-center justify-center gap-1">
             <span className="material-symbols-outlined text-[12px]">auto_awesome</span> Powered by Gemini Pro
@@ -377,11 +430,11 @@ export default function LaunchCampaignPage() {
                         <td className="p-4 text-center">
                           <input type="checkbox" className="accent-cyan cursor-pointer size-4" checked={selectedLeads.includes(lead.id)} readOnly />
                         </td>
-                        <td className="p-4 font-bold text-slate-200">{lead.name}</td>
-                        <td className="p-4 text-slate-400 text-sm">{lead.role}</td>
+                        <td className="p-4 font-bold text-slate-200">{lead.first_name} {lead.last_name}</td>
+                        <td className="p-4 text-slate-400 text-sm">{lead.role || lead.type || 'N/A'}</td>
                         <td className="p-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${lead.heatIndex === 'HOT' ? 'text-orange-500 border-orange-500/30' : lead.heatIndex === 'WARM' ? 'text-amber-500 border-amber-500/30' : 'text-blue-500 border-blue-500/30'}`}>
-                            {lead.heatIndex}
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${lead.heat_index === 'HOT' ? 'text-orange-500 border-orange-500/30' : lead.heat_index === 'WARM' ? 'text-amber-500 border-amber-500/30' : 'text-blue-500 border-blue-500/30'}`}>
+                            {lead.heat_index || 'UNKNOWN'}
                           </span>
                         </td>
                       </tr>

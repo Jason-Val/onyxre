@@ -37,14 +37,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_property_public", { p_property_id: id });
-  if (!data) return { title: "Property | OnyxRE" };
+  if (!data) return { title: "Property | Specular OS" };
   const p = data as unknown as PropertyPublic;
   const addr = [p.address_line1, p.city, p.state].filter(Boolean).join(", ");
   return {
-    title: `${addr} | OnyxRE`,
+    title: `${addr} | Specular OS`,
     description: p.description ?? `${addr} — Listed at $${p.price?.toLocaleString() ?? "Contact for price"}`,
     openGraph: {
-      title: `${addr} | OnyxRE`,
+      title: `${addr} | Specular OS`,
       description: p.description ?? "",
       images: p.thumbnail_url ? [{ url: p.thumbnail_url }] : [],
     },

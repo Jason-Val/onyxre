@@ -181,7 +181,7 @@ export default function AccountPage() {
             {/* ── Profile ── */}
             {activeSection === "profile" && (
               <>
-                <SectionHeader title="Profile" subtitle="Your agent identity across OnyxRE." />
+                <SectionHeader title="Profile" subtitle="Your agent identity across Specular OS." />
                 {/* Avatar */}
                 <div className="flex items-center gap-6">
                   <div className="relative">
@@ -360,7 +360,7 @@ export default function AccountPage() {
             {/* ── Integrations ── */}
             {activeSection === "integrations" && (
               <>
-                <SectionHeader title="Integrations & APIs" subtitle="Connect external services to OnyxRE." />
+                <SectionHeader title="Integrations & APIs" subtitle="Connect external services to Specular OS." />
                 
                 <div className="bg-[#161B26] border border-[#30363D] rounded-2xl p-6 flex flex-col gap-4">
                   <div className="flex items-center gap-3">

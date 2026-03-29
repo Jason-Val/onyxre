@@ -19,7 +19,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "OnyxRE Agent OS",
+  title: "Specular OS Agent OS",
   description: "Elite Intelligence for the Modern Realtor",
 };
 

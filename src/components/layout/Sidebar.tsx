@@ -84,7 +84,7 @@ export function Sidebar() {
           <div className="absolute inset-0 bg-gradient-to-br from-cyan/20 to-transparent opacity-50"></div>
           <img
             src="/logo.png"
-            alt="OnyxRE Logo"
+            alt="Specular OS Logo"
             className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_5px_rgba(0,209,255,0.5)]"
           />
         </div>
@@ -92,7 +92,7 @@ export function Sidebar() {
           "font-display font-bold text-xl tracking-tight text-white whitespace-nowrap transition-all duration-300",
           isExpanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 w-0 hidden"
         )}>
-          OnyxRE
+          Specular OS
         </span>
       </div>
 

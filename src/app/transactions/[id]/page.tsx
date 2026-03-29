@@ -296,7 +296,7 @@ export default function TransactionDetailPage() {
 
             <div className="flex items-center gap-6">
               <div className="flex flex-col items-end gap-1">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">OnyxAI Transaction Coordinator</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none">Specular AI Transaction Coordinator</p>
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={handleToggleAI}

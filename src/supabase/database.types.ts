@@ -14,6 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      crm_campaign_touchpoints: {
+        Row: {
+          agent_id: string
+          campaign_id: string
+          channel: string
+          content: string
+          created_at: string
+          error_log: string | null
+          id: string
+          lead_id: string
+          scheduled_for: string
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          campaign_id: string
+          channel: string
+          content: string
+          created_at?: string
+          error_log?: string | null
+          id?: string
+          lead_id: string
+          scheduled_for: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          campaign_id?: string
+          channel?: string
+          content?: string
+          created_at?: string
+          error_log?: string | null
+          id?: string
+          lead_id?: string
+          scheduled_for?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaign_touchpoints_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_touchpoints_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaign_touchpoints_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_campaigns: {
+        Row: {
+          agent_id: string
+          campaign_type: string
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          status: string
+          target_audience: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          campaign_type: string
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          status?: string
+          target_audience: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          campaign_type?: string
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          status?: string
+          target_audience?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaigns_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           agent_id: string
@@ -292,6 +410,7 @@ export type Database = {
           lot_size: string | null
           mls_data: Json | null
           organization_id: string
+          page_views: number
           price: number | null
           sq_ft: number | null
           state: string | null
@@ -314,6 +433,7 @@ export type Database = {
           lot_size?: string | null
           mls_data?: Json | null
           organization_id: string
+          page_views?: number
           price?: number | null
           sq_ft?: number | null
           state?: string | null
@@ -336,6 +456,7 @@ export type Database = {
           lot_size?: string | null
           mls_data?: Json | null
           organization_id?: string
+          page_views?: number
           price?: number | null
           sq_ft?: number | null
           state?: string | null
@@ -639,6 +760,33 @@ export type Database = {
           },
         ]
       }
+      webhook_logs: {
+        Row: {
+          created_at: string | null
+          error_msg: string | null
+          id: string
+          payload: Json | null
+          post_id: string | null
+          source: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_msg?: string | null
+          id?: string
+          payload?: Json | null
+          post_id?: string | null
+          source: string
+        }
+        Update: {
+          created_at?: string | null
+          error_msg?: string | null
+          id?: string
+          payload?: Json | null
+          post_id?: string | null
+          source?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -651,6 +799,7 @@ export type Database = {
       current_user_org_id: { Args: never; Returns: string }
       get_agent_public_profile: { Args: { p_agent_id: string }; Returns: Json }
       get_property_public: { Args: { p_property_id: string }; Returns: Json }
+      increment_page_view: { Args: { prop_id: string }; Returns: undefined }
       is_user_broker: { Args: never; Returns: boolean }
       submit_agent_lead: {
         Args: {

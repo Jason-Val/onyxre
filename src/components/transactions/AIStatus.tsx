@@ -8,7 +8,7 @@ export function AIStatus({ isActive = true }: { isActive?: boolean }) {
       isActive ? 'border-cyan/30 shadow-[0_0_15px_rgba(0,209,255,0.1)]' : 'border-white/5 opacity-50'
     }`} data-purpose="ai-status">
       <span className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-cyan' : 'text-slate-500'}`}>
-        {isActive ? 'Onyx AI Active' : 'Onyx AI Inactive'}
+        {isActive ? 'Specular AI Active' : 'Specular AI Inactive'}
       </span>
       <div className="flex items-end h-4 gap-[2px]">
         {[0.2, 0.4, 0.1, 0.3, 0.2].map((delay, i) => (

@@ -81,7 +81,7 @@ export function AgentA2PStep({ onSkip }: AgentA2PStepProps) {
                 <br />
                 Carriers require you to register as a{" "}
                 <span className="text-white font-semibold">Sole Proprietor</span>. Your legal name
-                and SSN are used only to verify your identity — OnyxRE never stores your SSN.
+                and SSN are used only to verify your identity — Specular OS never stores your SSN.
               </InfoBanner>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
@@ -104,7 +104,7 @@ export function AgentA2PStep({ onSkip }: AgentA2PStepProps) {
                     className="w-full bg-onyx border border-[#27373a] text-slate-100 rounded-lg h-12 px-4 focus:border-cyan outline-none transition-all placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,209,255,0.1)] tracking-widest"
                   />
                   <p className="text-xs text-slate-500 ml-1">
-                    🔒 Encrypted and sent directly to the carrier registry. OnyxRE never stores
+                    🔒 Encrypted and sent directly to the carrier registry. Specular OS never stores
                     your SSN on our servers.
                   </p>
                 </div>
@@ -143,7 +143,7 @@ export function AgentA2PStep({ onSkip }: AgentA2PStepProps) {
                   <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
                   <div className="w-3 h-3 rounded-full bg-green-500/60" />
                   <span className="ml-3 text-xs text-slate-500 font-mono">
-                    {agentDisplayName.toLowerCase().replace(/\s+/g, "")}.onyxre.com
+                    {agentDisplayName.toLowerCase().replace(/\s+/g, "")}.specularos.com
                   </span>
                 </div>
                 <div className="bg-[#161B26] p-8 flex flex-col gap-4">
@@ -153,7 +153,7 @@ export function AgentA2PStep({ onSkip }: AgentA2PStepProps) {
                     </div>
                     <div>
                       <h3 className="text-white font-bold text-xl">{agentDisplayName}</h3>
-                      <p className="text-slate-400 text-sm">Licensed Real Estate Agent · OnyxRE</p>
+                      <p className="text-slate-400 text-sm">Licensed Real Estate Agent · Specular OS</p>
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 bg-[#0B0E14] border border-[#27373a] rounded-lg p-3 leading-relaxed">

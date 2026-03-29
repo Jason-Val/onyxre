@@ -72,7 +72,7 @@ export const defaultOnboardingData: OnboardingData = {
   a2pCampaignDescription:
     "Reaching out to interested home buyers and sellers to provide property information, schedule showings, and offer market updates.",
   a2pSampleMessage1:
-    "Hi [Name], this is [Agent Name] with OnyxRE. I saw you were looking at 123 Main St—would you like me to send over the disclosures or schedule a private tour?",
+    "Hi [Name], this is [Agent Name] with Specular OS. I saw you were looking at 123 Main St—would you like me to send over the disclosures or schedule a private tour?",
   a2pSampleMessage2:
     "Hi [Name], just a quick update—the price just dropped on the home we toured yesterday. Let me know if you want to take another look!",
 };

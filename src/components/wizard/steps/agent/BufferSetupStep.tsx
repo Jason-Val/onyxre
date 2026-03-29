@@ -43,7 +43,7 @@ export function BufferSetupStep() {
       <div className="flex flex-col gap-2 relative">
         <h2 className="text-3xl font-black font-display tracking-tight text-white border-l-4 border-cyan pl-4">Connect Social Media</h2>
         <p className="text-slate-400 pl-4">
-          OnyxRE uses Buffer to automatically publish and schedule the content you generate with our marketing studios to Instagram, Facebook, and LinkedIn.
+          Specular OS uses Buffer to automatically publish and schedule the content you generate with our marketing studios to Instagram, Facebook, and LinkedIn.
         </p>
       </div>
 

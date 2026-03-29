@@ -110,7 +110,7 @@ export default function AuthSlider({ isOpen, onClose }: AuthSliderProps) {
                     <input
                       type="email" required
                       className="w-full bg-[#0A0D14] border border-[#30363D] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan focus:ring-1 focus:ring-cyan/50 transition-all placeholder:text-slate-600"
-                      placeholder="agent@onyxre.com"
+                      placeholder="agent@specularos.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />

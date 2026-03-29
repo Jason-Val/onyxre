@@ -19,10 +19,10 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 glass-morphism h-20 flex items-center px-6 md:px-12 justify-between">
         <div className="flex items-center gap-3">
           <div className="size-10 bg-cyan/10 rounded-xl flex items-center justify-center border border-cyan/20 shadow-[0_0_15px_rgba(0,209,255,0.1)] overflow-hidden p-1.5 align-middle">
-            <img src="/logo.png" alt="OnyxRE Logo" className="w-8 h-8 object-contain" />
+            <img src="/logo.png" alt="Specular OS Logo" className="w-8 h-8 object-contain" />
           </div>
           <span className="font-display font-bold text-xl tracking-tight hidden sm:block">
-            OnyxRE
+            Specular OS
           </span>
         </div>
 
@@ -55,7 +55,7 @@ export default function Home() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan"></span>
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">OnyxRE OS 2.0 is Live</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Specular OS OS 2.0 is Live</span>
         </div>
 
         <h1 className="text-5xl md:text-7xl font-black font-serif tracking-tight mb-2 max-w-4xl mx-auto leading-tight pointer-events-auto">

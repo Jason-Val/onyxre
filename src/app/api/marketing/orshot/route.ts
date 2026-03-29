@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     let brokerImage = "https://placehold.co/400x400/222/999?text=Broker";
     let brandPrimary = "#0B0E14";
     let brandSecondary = "#00D1FF";
-    let brokerageName = "OnyxRE";
+    let brokerageName = "Specular OS";
 
     if (user) {
       const { data: profile } = await supabase

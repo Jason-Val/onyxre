@@ -88,7 +88,7 @@ export function PropertySelectStep({ selectedId, onSelect }: PropertySelectStepP
           </div>
           <div>
             <h4 className="text-white font-bold text-sm">Create New Listing</h4>
-            <p className="text-slate-500 text-xs">The property isn't in Onyx yet.</p>
+            <p className="text-slate-500 text-xs">The property isn't in Specular OS yet.</p>
           </div>
         </div>
         <span className="material-symbols-outlined text-white/10 group-hover:text-white/40 transition-colors">chevron_right</span>

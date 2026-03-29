@@ -130,7 +130,7 @@ export function BrokerA2PStep({ onSkip }: BrokerA2PStepProps) {
                 </div>
                 <p className="text-sm text-slate-300 select-none">
                   I consent to sending automated marketing and transactional SMS messages to
-                  opted-in contacts via OnyxRE Loomis CRM.
+                  opted-in contacts via Specular OS Loomis CRM.
                 </p>
               </div>
             </motion.div>

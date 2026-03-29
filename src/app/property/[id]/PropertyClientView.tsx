@@ -379,7 +379,7 @@ export function PropertyClientView({ property, googleMapsApiKey }: { property: P
       {/* Modern Footer */}
       <footer className="border-t border-white/5 py-12 px-6 bg-black/50">
         <div className="max-w-6xl mx-auto flex flex-col items-center text-center gap-6">
-          <div className="text-onyx-muted text-[10px] font-black uppercase tracking-[0.4em]">OnyxRE Luxury Real Estate Platform</div>
+          <div className="text-onyx-muted text-[10px] font-black uppercase tracking-[0.4em]">Specular OS Luxury Real Estate Platform</div>
           <p className="text-white/10 text-[10px] tracking-widest">
             © {new Date().getFullYear()} {property.brokerage_name}. All rights reserved. 
             Information deemed reliable but not guaranteed.

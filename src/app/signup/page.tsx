@@ -71,9 +71,9 @@ export default function SignupPage() {
       >
         {/* Logo + wordmark */}
         <div className="text-center mb-10">
-          <img src="/logo.png" alt="OnyxRE" className="w-12 h-12 mx-auto mb-4" />
+          <img src="/logo.png" alt="Specular OS" className="w-12 h-12 mx-auto mb-4" />
           <h1 className="text-3xl font-bold font-display text-white tracking-tight">
-            {mode === "sign-up" ? "Join OnyxRE" : "Welcome Back"}
+            {mode === "sign-up" ? "Join Specular OS" : "Welcome Back"}
           </h1>
           <p className="text-slate-400 mt-2 text-sm">
             {mode === "sign-up"
@@ -125,7 +125,7 @@ export default function SignupPage() {
               <Field
                 label="Email Address"
                 type="email"
-                placeholder="agent@onyxre.com"
+                placeholder="agent@specularos.com"
                 value={email}
                 onChange={setEmail}
                 required

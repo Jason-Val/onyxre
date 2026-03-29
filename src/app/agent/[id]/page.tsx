@@ -29,14 +29,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_agent_public_profile", { p_agent_id: id });
-  if (!data) return { title: "Agent | OnyxRE" };
+  if (!data) return { title: "Agent | Specular OS" };
   const agent = data as unknown as AgentProfile;
   const name = `${agent.first_name ?? ""} ${agent.last_name ?? ""}`.trim();
   return {
-    title: `${name} | OnyxRE Real Estate`,
+    title: `${name} | Specular OS Real Estate`,
     description: agent.bio ?? `Connect with ${name}, a licensed real estate agent at ${agent.brokerage_name}.`,
     openGraph: {
-      title: `${name} | OnyxRE Real Estate`,
+      title: `${name} | Specular OS Real Estate`,
       description: agent.bio ?? "",
       images: agent.avatar_url ? [{ url: agent.avatar_url }] : [],
     },
@@ -101,7 +101,7 @@ export default async function AgentLandingPage({ params }: { params: Promise<{ i
             <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: primary, color: secondary }}>
               O
             </div>
-            <span className="text-white/25 text-xs">Powered by OnyxRE</span>
+            <span className="text-white/25 text-xs">Powered by Specular OS</span>
           </div>
         </header>
 
@@ -186,7 +186,7 @@ export default async function AgentLandingPage({ params }: { params: Promise<{ i
               <div className="w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center" style={{ backgroundColor: primary, color: secondary }}>
                 O
               </div>
-              <span className="text-white/30 text-xs font-semibold">OnyxRE</span>
+              <span className="text-white/30 text-xs font-semibold">Specular OS</span>
             </div>
             <p className="text-white/25 text-[11px] leading-relaxed max-w-md">
               By submitting this form, you agree to receive text messages from {name} regarding real estate listings,
@@ -195,7 +195,7 @@ export default async function AgentLandingPage({ params }: { params: Promise<{ i
               View our <a href="/privacy" className="underline underline-offset-2">Privacy Policy</a>.
             </p>
             <p className="text-white/20 text-[10px]">
-              © {new Date().getFullYear()} {name} · {agent.brokerage_name} · Powered by OnyxRE
+              © {new Date().getFullYear()} {name} · {agent.brokerage_name} · Powered by Specular OS
             </p>
           </div>
         </footer>
