@@ -9,6 +9,7 @@ interface SendEmailProps {
   html: string;
   text?: string;
   from?: string;
+  replyTo?: string;
 }
 
 /**
@@ -19,8 +20,8 @@ export async function sendEmail({
   subject,
   html,
   text,
-  // Using onboarding@resend.dev as default since it's universally permitted on free/sandbox tier
-  from = 'Loomis CRM <onboarding@resend.dev>', 
+  from = 'Loomis CRM <hello@specularos.com>',
+  replyTo,
 }: SendEmailProps) {
   try {
     const { data, error } = await resend.emails.send({
@@ -29,6 +30,7 @@ export async function sendEmail({
       subject,
       html,
       text,
+      replyTo,
     });
 
     if (error) {

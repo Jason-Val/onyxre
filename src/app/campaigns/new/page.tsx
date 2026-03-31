@@ -6,15 +6,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from '@/supabase/client';
 import { useRouter } from 'next/navigation';
 
-const mockProperties = [
-  { id: 1, address: "123 Maple St, Beverly Hills, CA", price: "$2,850,000", image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=200&h=150" },
-  { id: 2, address: "456 Ocean Ave, Santa Monica, CA", price: "$4,100,000", image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=200&h=150" },
-  { id: 3, address: "789 Pine Ln, Brentwood, CA", price: "$3,200,000", image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=200&h=150" },
-];
+// Note: mockProperties has been removed to switch to dynamic fetching
 
 export default function LaunchCampaignPage() {
   const [campaignType, setCampaignType] = useState<string | null>(null);
   const [targetAudience, setTargetAudience] = useState("All Hot Leads");
+  const [selectedChannels, setSelectedChannels] = useState<string[]>(['email']);
+  const [a2pStatus, setA2pStatus] = useState<string | null>(null);
 
   // Modal States
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -27,67 +25,111 @@ export default function LaunchCampaignPage() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [selectedProperty, setSelectedProperty] = useState<number | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
   const [propertyCampaignSubtype, setPropertyCampaignSubtype] = useState<string | null>(null);
   const [nurtureSubtype, setNurtureSubtype] = useState<string | null>(null);
 
-  const [leads, setLeads] = useState<any[]>([]);
-  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
+  const [priceReductionAmount, setPriceReductionAmount] = useState("");
+  const [buyerMatchMessage, setBuyerMatchMessage] = useState("");
+
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
+
+  const [properties, setProperties] = useState<any[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(true);
+
   const [isGenerating, setIsGenerating] = useState(false);
   
   const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
-    async function fetchLeads() {
-      const { data } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
-      if (data) setLeads(data);
-      setIsLoadingLeads(false);
+    async function loadData() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [contactsResponse, propertiesResponse, profileRes] = await Promise.all([
+        supabase.from('leads').select('*').order('created_at', { ascending: false }),
+        supabase.from('properties').select('*').eq('agent_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('profiles').select('organization_id').eq('id', user.id).single()
+      ]);
+
+      if (contactsResponse.data) setContacts(contactsResponse.data);
+      if (propertiesResponse.data) setProperties(propertiesResponse.data);
+      if (profileRes.data?.organization_id) {
+        const orgRes = await supabase.from('organizations').select('a2p_status').eq('id', profileRes.data.organization_id).single();
+        if (orgRes.data?.a2p_status) {
+          setA2pStatus(orgRes.data.a2p_status);
+        }
+      }
+      
+      setIsLoadingContacts(false);
+      setIsLoadingProperties(false);
     }
-    fetchLeads();
+    loadData();
   }, []);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
-    let leadIds: string[] = [];
+    let contactIds: string[] = [];
     
     if (targetAudience === "All Hot Leads") {
-      leadIds = leads.filter(l => l.heat_index === "HOT").map(l => l.id);
+      contactIds = contacts.filter(l => l.heat_index === "HOT").map(l => l.id);
     } else if (targetAudience.startsWith("Role:")) {
       const roleMatch = targetAudience.split("Role: ")[1]?.toUpperCase();
-      leadIds = leads.filter(l => l.role?.toUpperCase() === roleMatch || l.type?.toUpperCase() === roleMatch).map(l => l.id);
+      contactIds = contacts.filter(l => l.role?.toUpperCase() === roleMatch || l.type?.toUpperCase() === roleMatch).map(l => l.id);
     } else {
-      leadIds = selectedLeads;
+      contactIds = selectedLeads;
     }
 
-    if (leadIds.length === 0) {
-      alert("No leads found matching your criteria.");
+    if (contactIds.length === 0) {
+      alert("No contacts found matching your criteria.");
       setIsGenerating(false);
       return;
     }
 
     try {
+      // Pass the extra properties for our new templates
       const res = await fetch('/api/ai/generate-campaign', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignType, targetAudience, leadIds })
+        body: JSON.stringify({ 
+          campaignType, 
+          targetAudience, 
+          leadIds: contactIds,
+          priceReductionAmount,
+          buyerMatchMessage,
+          propertyId: selectedProperty,
+          propertyCampaignSubtype,
+          channels: selectedChannels
+        })
       });
       const data = await res.json();
       if (data.success) {
-        alert(`Campaign queued! We scheduled \${data.touchpointsCount} emails.`);
+        alert(`Campaign queued! We scheduled ${data.touchpointsCount || "your"} emails.`);
         router.push('/crm');
       } else {
-        alert(data.error || "Failed to generate campaign");
+        alert(data.error || "Failed to launch campaign");
       }
     } catch (error) {
       console.error(error);
-      alert("Failed to generate campaign");
+      alert("Failed to launch campaign");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const filteredLeads = leads.filter(l => 
+  const toggleChannel = (channel: string) => {
+    setSelectedChannels(prev => {
+      if (prev.includes(channel)) {
+        if (prev.length === 1) return prev; // Prevent unselecting all
+        return prev.filter(c => c !== channel);
+      }
+      return [...prev, channel];
+    });
+  };
+
+  const filteredContacts = contacts.filter(l => 
     (l.first_name + " " + (l.last_name || "")).toLowerCase().includes(searchQuery.toLowerCase()) || 
     (l.role || l.type || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -190,6 +232,50 @@ export default function LaunchCampaignPage() {
 
             </div>
           </section>
+
+          {/* Delivery Channel */}
+          <section className="bg-[#11151c] border border-[#27373a] rounded-2xl p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-6 text-white tracking-widest uppercase text-sm border-b border-[#27373a] pb-3">3. Delivery Channel</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Email Toggle */}
+              <button 
+                onClick={() => toggleChannel('email')}
+                className={`p-5 rounded-xl border text-left flex flex-col gap-2 transition-all ${selectedChannels.includes('email') ? "bg-cyan/10 border-cyan text-white shadow-[0_0_15px_rgba(0,209,255,0.15)]" : "bg-[#161B22] border-[#27373a] text-slate-400 hover:border-cyan/50"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="material-symbols-outlined text-2xl text-cyan">mail</span>
+                  {selectedChannels.includes("email") && <span className="material-symbols-outlined text-cyan">check_circle</span>}
+                </div>
+                <span className="font-bold text-lg">Email </span>
+                <span className="text-xs">Deliver via HTML template</span>
+              </button>
+
+              {/* SMS Toggle */}
+              <div className="relative group flex flex-col">
+                <button 
+                  disabled={a2pStatus !== 'APPROVED'}
+                  onClick={() => toggleChannel('sms')}
+                  className={`flex-1 p-5 rounded-xl border text-left flex flex-col gap-2 transition-all ${a2pStatus !== 'APPROVED' ? "opacity-30 cursor-not-allowed bg-[#161B22] border-[#27373a]" : selectedChannels.includes('sms') ? "bg-indigo-500/10 border-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.15)]" : "bg-[#161B22] border-[#27373a] text-slate-400 hover:border-indigo-500/50"}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="material-symbols-outlined text-2xl text-indigo-400">sms</span>
+                    {selectedChannels.includes("sms") && <span className="material-symbols-outlined text-indigo-400">check_circle</span>}
+                  </div>
+                  <span className="font-bold text-lg">Text Message</span>
+                  <span className="text-xs">Deliver via SMS</span>
+                </button>
+                {a2pStatus !== 'APPROVED' && (
+                  <div className="absolute -top-[52px] left-1/2 -translate-x-1/2 bg-slate-800 text-slate-200 text-xs p-2.5 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap pointer-events-none z-10 font-bold border border-slate-700 shadow-xl">
+                    To send text messages, complete your A2P registration in Settings.
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 border-b border-r border-slate-700"></div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </section>
+
         </div>
 
         {/* Summary Sidebar */}
@@ -207,7 +293,10 @@ export default function LaunchCampaignPage() {
             </div>
             <div className="flex justify-between items-center border-b border-[#27373a]/50 pb-2">
               <span className="text-slate-500">Channel</span>
-              <span className="font-bold text-white flex items-center gap-2"><span className="material-symbols-outlined text-[16px] text-cyan">mail</span> <span className="material-symbols-outlined text-[16px] text-indigo-500">sms</span> Omni-channel</span>
+              <span className="font-bold text-white flex items-center gap-2">
+                {selectedChannels.includes('email') && <span className="material-symbols-outlined text-[16px] text-cyan" title="Email">mail</span>}
+                {selectedChannels.includes('sms') && <span className="material-symbols-outlined text-[16px] text-indigo-500" title="Text Message">sms</span>}
+              </span>
             </div>
           </div>
 
@@ -219,9 +308,11 @@ export default function LaunchCampaignPage() {
             {isGenerating ? (
               <span className="material-symbols-outlined animate-spin">sync</span>
             ) : (
-              <span className="material-symbols-outlined">rocket_launch</span>
+              <span className="material-symbols-outlined">
+                {campaignType?.startsWith("Property") ? "send" : "rocket_launch"}
+              </span>
             )}
-            {isGenerating ? "Generating..." : "Generate Campaign"}
+            {isGenerating ? (campaignType?.startsWith("Property") ? "Sending..." : "Generating...") : (campaignType?.startsWith("Property") ? "Send Email Blast" : "Generate Campaign")}
           </button>
           <p className="text-center text-[10px] text-slate-500 mt-2 flex items-center justify-center gap-1">
             <span className="material-symbols-outlined text-[12px]">auto_awesome</span> Powered by Gemini Pro
@@ -250,28 +341,41 @@ export default function LaunchCampaignPage() {
                   <div>
                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">1. Select Property</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {mockProperties.map(p => (
+                      {isLoadingProperties ? (
+                        <div className="text-slate-500 text-sm p-4 col-span-2 text-center">Loading properties...</div>
+                      ) : properties.length === 0 ? (
+                        <div className="text-slate-500 text-sm p-4 col-span-2 text-center">No active properties found.</div>
+                      ) : properties.map(p => {
+                        const addressString = [p.address_line1, p.city, p.state].filter(Boolean).join(", ");
+                        const displayPrice = p.price ? `$${p.price.toLocaleString()}` : "Price on Request";
+                        return (
                         <div 
                           key={p.id} 
                           onClick={() => setSelectedProperty(p.id)}
                           className={`flex items-start gap-4 p-3 rounded-xl border cursor-pointer transition-all ${selectedProperty === p.id ? "bg-cyan/10 border-cyan shadow-[0_0_10px_rgba(0,209,255,0.15)]" : "bg-[#161B22] border-[#27373a] hover:border-cyan/50"}`}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.image} alt={p.address} className="w-20 h-16 object-cover rounded-lg border border-[#27373a] shrink-0" />
+                          {p.thumbnail_url ? (
+                            <img src={p.thumbnail_url} alt={addressString} className="w-20 h-16 object-cover rounded-lg border border-[#27373a] shrink-0" />
+                          ) : (
+                            <div className="w-20 h-16 bg-[#1a2530] rounded-lg border border-[#27373a] shrink-0 flex items-center justify-center">
+                              <span className="material-symbols-outlined text-slate-500">real_estate_agent</span>
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-slate-200 text-sm truncate">{p.address.split(',')[0]}</p>
-                            <p className="text-slate-500 text-xs truncate">{p.address.split(',').slice(1).join(',').trim()}</p>
-                            <p className="text-cyan text-xs font-bold mt-1">{p.price}</p>
+                            <p className="font-bold text-slate-200 text-sm truncate">{p.address_line1 || "No Address"}</p>
+                            <p className="text-slate-500 text-xs truncate">{[p.city, p.state].filter(Boolean).join(", ") || "-" }</p>
+                            <p className="text-cyan text-xs font-bold mt-1">{displayPrice}</p>
                           </div>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
 
                   <div>
                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3">2. Campaign Type</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {["New Listing", "Open House", "Price Reduction", "Sold"].map(type => (
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      {["New Listing", "Price Reduction", "Back On Market", "Buyer Match"].map(type => (
                         <button
                           key={type}
                           onClick={() => setPropertyCampaignSubtype(type)}
@@ -281,6 +385,34 @@ export default function LaunchCampaignPage() {
                         </button>
                       ))}
                     </div>
+
+                    <AnimatePresence>
+                      {propertyCampaignSubtype === "Price Reduction" && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Price Reduction Amount</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. $50,000" 
+                            value={priceReductionAmount}
+                            onChange={(e) => setPriceReductionAmount(e.target.value)}
+                            className="w-full bg-[#161B22] border border-[#27373a] rounded-lg p-3 text-sm focus:border-cyan outline-none text-slate-100 placeholder:text-slate-600 transition-colors"
+                          />
+                        </motion.div>
+                      )}
+                      
+                      {propertyCampaignSubtype === "Buyer Match" && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Personal Message</label>
+                          <textarea 
+                            placeholder="Type a thoughtful personal message here..." 
+                            value={buyerMatchMessage}
+                            onChange={(e) => setBuyerMatchMessage(e.target.value)}
+                            rows={3}
+                            className="w-full bg-[#161B22] border border-[#27373a] rounded-lg p-3 text-sm focus:border-cyan outline-none text-slate-100 placeholder:text-slate-600 transition-colors resize-none"
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>
@@ -289,9 +421,9 @@ export default function LaunchCampaignPage() {
                 <button onClick={() => setIsPropertyModalOpen(false)} className="px-6 py-2.5 bg-transparent border border-[#27373a] text-slate-300 font-bold rounded-xl hover:bg-[#161B22] transition-all">Cancel</button>
                 <button 
                   onClick={() => {
-                    const prop = mockProperties.find(p => p.id === selectedProperty);
+                    const prop = properties.find(p => p.id === selectedProperty);
                     if (prop && propertyCampaignSubtype) {
-                      setCampaignType(`Property: ${propertyCampaignSubtype} - ${prop.address.split(',')[0]}`);
+                      setCampaignType(`Property: ${propertyCampaignSubtype} - ${prop.address_line1 || "Listing"}`);
                       setIsPropertyModalOpen(false);
                     }
                   }}
@@ -406,9 +538,9 @@ export default function LaunchCampaignPage() {
                         <input 
                           type="checkbox" 
                           className="accent-cyan cursor-pointer size-4" 
-                          checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
+                          checked={selectedLeads.length === filteredContacts.length && filteredContacts.length > 0}
                           onChange={(e) => {
-                            if (e.target.checked) setSelectedLeads(filteredLeads.map(l => l.id));
+                            if (e.target.checked) setSelectedLeads(filteredContacts.map(l => l.id));
                             else setSelectedLeads([]);
                           }}
                         />
@@ -419,7 +551,7 @@ export default function LaunchCampaignPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#27373a]/50">
-                    {filteredLeads.length > 0 ? filteredLeads.map(lead => (
+                    {filteredContacts.length > 0 ? filteredContacts.map(lead => (
                       <tr 
                         key={lead.id} 
                         className={`hover:bg-[#1C232B] cursor-pointer transition-colors ${selectedLeads.includes(lead.id) ? 'bg-[#1C232B]' : ''}`} 

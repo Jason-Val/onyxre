@@ -80,14 +80,22 @@ export function Sidebar() {
       )}></div>
 
       <div className="flex items-center gap-3 mb-10 h-10 w-full shrink-0 px-2 lg:px-0">
-        <div className="size-10 bg-cyan/5 rounded-xl flex items-center justify-center border border-cyan/20 shadow-[0_0_15px_rgba(0,209,255,0.1)] shrink-0 overflow-hidden p-1 relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan/20 to-transparent opacity-50"></div>
+        <div className="flex items-center justify-center h-10 relative shrink-0">
           <img
-            src="/logo.png"
+            src="/SpecOS_LOGO.png"
             alt="Specular OS Logo"
-            className="w-full h-full object-contain relative z-10 drop-shadow-[0_0_5px_rgba(0,209,255,0.5)]"
+            className={clsx(
+              "h-8 w-auto object-contain transition-all duration-300 drop-shadow-[0_0_5px_rgba(0,209,255,0.5)]",
+              isExpanded ? "opacity-100" : "opacity-0 hidden"
+            )}
           />
+          {!isExpanded && (
+            <div className="size-10 bg-cyan/5 rounded-xl flex items-center justify-center border border-cyan/20 shadow-[0_0_15px_rgba(0,209,255,0.1)] shrink-0 overflow-hidden relative">
+              <span className="font-display font-bold text-xl text-cyan">S</span>
+            </div>
+          )}
         </div>
+        
         <span className={clsx(
           "font-display font-bold text-xl tracking-tight text-white whitespace-nowrap transition-all duration-300",
           isExpanded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 w-0 hidden"

@@ -71,7 +71,7 @@ export default function SignupPage() {
       >
         {/* Logo + wordmark */}
         <div className="text-center mb-10">
-          <img src="/logo.png" alt="Specular OS" className="w-12 h-12 mx-auto mb-4" />
+          <img src="/SpecOS_LOGO.png" alt="Specular OS" className="h-[4.5rem] w-auto mx-auto mb-4 drop-shadow-[0_0_15px_rgba(0,209,255,0.3)]" />
           <h1 className="text-3xl font-bold font-display text-white tracking-tight">
             {mode === "sign-up" ? "Join Specular OS" : "Welcome Back"}
           </h1>

@@ -18,8 +18,8 @@ export default function Home() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 glass-morphism h-20 flex items-center px-6 md:px-12 justify-between">
         <div className="flex items-center gap-3">
-          <div className="size-10 bg-cyan/10 rounded-xl flex items-center justify-center border border-cyan/20 shadow-[0_0_15px_rgba(0,209,255,0.1)] overflow-hidden p-1.5 align-middle">
-            <img src="/logo.png" alt="Specular OS Logo" className="w-8 h-8 object-contain" />
+          <div className="flex items-center justify-center p-1 rounded-xl bg-cyan/5 border border-cyan/20 shadow-[0_0_15px_rgba(0,209,255,0.1)]">
+            <img src="/SpecOS_LOGO.png" alt="Specular OS Logo" className="h-8 w-auto object-contain drop-shadow-[0_0_10px_rgba(0,209,255,0.3)]" />
           </div>
           <span className="font-display font-bold text-xl tracking-tight hidden sm:block">
             Specular OS

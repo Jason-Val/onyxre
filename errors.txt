@@ -1,0 +1,90 @@
+﻿npx : - Preparing files...
+At line:1 char:1
++ npx email export --dir 
+src/emails 2>&1 | out-file 
+-encoding utf8 erro ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (- P  
+  reparing files...:Stri   
+ ng) [], RemoteExceptio    
+n
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+
+Γ£ö Preparing files...
+
+Γáï rendering C:\Users\jaso
+n\Documents\AG-Sites\OnyxRE
+\web\out\DemoEmail.cjsError
+: You are trying to use 
+the following Tailwind 
+classes that cannot be 
+inlined: sm:hidden 
+sm:table-cell sm:pl-6 
+sm:text-left md:p-8.
+For the media queries to 
+work properly on 
+rendering, they need to be 
+added into a <style> tag 
+inside of a <head> tag,
+the Tailwind component 
+tried finding a <head> 
+element but just wasn't 
+able to find it.
+
+Make sure that you have a 
+<head> element at some 
+point inside of the 
+<Tailwind> component at 
+any depth. 
+This can also be our 
+<Head> component.
+
+If you do already have a 
+<head> element at some 
+depth, 
+please file a bug https://g
+ithub.com/resend/react-emai
+l/issues/new?assignees=&lab
+els=Type%3A+Bug&projects=&t
+emplate=1.bug_report.yml.
+    at Tailwind (C:\Users\j
+ason\Documents\AG-Sites\Ony
+xRE\web\out\DemoEmail.cjs:8
+1636:67)
+    at Object.react_stack_b
+ottom_frame (C:\Users\jason
+\Documents\AG-Sites\OnyxRE\
+web\out\DemoEmail.cjs:29055
+:18)
+    at renderWithHooks (C:\
+Users\jason\Documents\AG-Si
+tes\OnyxRE\web\out\DemoEmai
+l.cjs:25521:24)
+    at renderElement (C:\Us
+ers\jason\Documents\AG-Site
+s\OnyxRE\web\out\DemoEmail.
+cjs:25781:25)
+    at retryNode (C:\Users\
+jason\Documents\AG-Sites\On
+yxRE\web\out\DemoEmail.cjs:
+26492:43)
+    at performWork (C:\User
+s\jason\Documents\AG-Sites\
+OnyxRE\web\out\DemoEmail.cj
+s:27205:19)
+    at C:\Users\jason\Docum
+ents\AG-Sites\OnyxRE\web\ou
+t\DemoEmail.cjs:25154:18
+    at node:internal/proces
+s/task_queues:140:7
+    at AsyncResource.runInA
+syncScope 
+(node:async_hooks:206:9)
+    at 
+AsyncResource.runMicrotask 
+(node:internal/process/task
+_queues:137:8)

@@ -25,7 +25,11 @@ export async function GET(req: Request) {
     // 3. Fetch all pending touchpoints that are scheduled for today or earlier
     const { data: touchpoints, error: fetchError } = await supabase
       .from('crm_campaign_touchpoints')
-      .select('*, leads:lead_id(email, first_name)')
+      .select(`
+        *, 
+        leads:lead_id(email, first_name),
+        agent:agent_id(first_name, last_name, email)
+      `)
       .eq('status', 'pending')
       .lte('scheduled_for', new Date().toISOString());
 
@@ -55,17 +59,32 @@ export async function GET(req: Request) {
       }
 
       if (touchpoint.channel.toLowerCase() === 'email') {
+
+        // Construct customized Agent Subdomain Sender
+        const agentProfile = touchpoint.agent as any;
+        const agentFirstName = agentProfile?.first_name || 'Loomis';
+        const agentLastName = agentProfile?.last_name || 'Agent';
+        const replyToEmail = agentProfile?.email || 'hello@specularos.com';
+        
+        const safeFirstName = agentFirstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const sendFromEmail = `${agentFirstName} ${agentLastName}`.trim() + ` <${safeFirstName}@mail.specularos.com>`;
+
         const result = await sendEmail({
           to: email,
           subject: touchpoint.subject || 'Specular OS Update',
           html: touchpoint.content, // HTML format email
+          from: sendFromEmail,
+          replyTo: replyToEmail
         });
 
-        if (result.success) {
+        if (result.success && result.data?.id) {
           // Success update
           await supabase
             .from('crm_campaign_touchpoints')
-            .update({ status: 'processed' })
+            .update({ 
+              status: 'processed',
+              external_id: result.data.id
+            })
             .eq('id', touchpoint.id);
           processedCount++;
         } else {
