@@ -77,10 +77,10 @@ export async function POST(req: Request) {
       };
 
       const agentDetails = {
-        name: profile?.full_name || "Agent",
-        title: profile?.title || "Real Estate Professional",
-        phone: profile?.phone_number || "",
-        email: profile?.email || user.email,
+        name: profile ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Agent" : "Agent",
+        title: (profile as any)?.title || "Real Estate Professional",
+        phone: (profile as any)?.phone_number || (profile as any)?.phone || "",
+        email: (profile as any)?.email || user.email,
         image: profile?.avatar_url || ""
       };
 
