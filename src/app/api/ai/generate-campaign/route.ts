@@ -184,9 +184,55 @@ export async function POST(req: Request) {
     // -------------------------------------------------------------------------------- //
     // PERSIST TOUCHPOINTS
     // -------------------------------------------------------------------------------- //
+    let insertedRows: any[] = [];
     if (rowsToInsert.length > 0) {
-      const { error: insertError } = await supabase.from('crm_campaign_touchpoints').insert(rowsToInsert);
+      const { data, error: insertError } = await supabase.from('crm_campaign_touchpoints').insert(rowsToInsert).select();
       if (insertError) throw insertError;
+      insertedRows = data || [];
+    }
+
+    // -------------------------------------------------------------------------------- //
+    // IMMEDIATELY DISPATCH PROPERTY MARKETING TOUCHPOINTS
+    // -------------------------------------------------------------------------------- //
+    if (campaignType?.startsWith('Property') && insertedRows.length > 0) {
+      const { sendEmail } = await import('@/lib/resend');
+      
+      const agentFirstName = profile?.first_name || 'Loomis';
+      const agentLastName = profile?.last_name || 'Agent';
+      const replyToEmail = (profile as any)?.email || user.email || 'hello@specularos.com';
+      const safeFirstName = agentFirstName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const sendFromEmail = `${agentFirstName} ${agentLastName}`.trim() + ` <${safeFirstName}@mail.specularos.com>`;
+
+      // Get lead emails
+      const leadEmailsMap = new Map();
+      const { data: leadsDataForEmail } = await supabase.from('leads').select('id, email').in('id', leadIds);
+      if (leadsDataForEmail) {
+        leadsDataForEmail.forEach(l => leadEmailsMap.set(l.id, l.email));
+      }
+
+      // Send all emails in parallel
+      await Promise.all(insertedRows.map(async (touchpoint) => {
+        if (touchpoint.channel.toLowerCase() === 'email') {
+          const email = leadEmailsMap.get(touchpoint.lead_id);
+          if (email) {
+            const result = await sendEmail({
+              to: email,
+              subject: touchpoint.subject,
+              html: touchpoint.content,
+              from: sendFromEmail,
+              replyTo: replyToEmail
+            });
+            
+            if (result.success && result.data?.id) {
+              await supabase.from('crm_campaign_touchpoints').update({ status: 'processed', external_id: result.data.id }).eq('id', touchpoint.id);
+            } else {
+              await supabase.from('crm_campaign_touchpoints').update({ status: 'failed', error_log: JSON.stringify(result.error) }).eq('id', touchpoint.id);
+            }
+          } else {
+            await supabase.from('crm_campaign_touchpoints').update({ status: 'failed', error_log: 'Lead has no email address.' }).eq('id', touchpoint.id);
+          }
+        }
+      }));
     }
 
     return NextResponse.json({ success: true, campaign_id: campaign.id, touchpointsCount: rowsToInsert.length });
