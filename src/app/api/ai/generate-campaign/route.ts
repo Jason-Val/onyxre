@@ -9,6 +9,7 @@ import { JustListedEmail } from '@/emails/JustListed';
 import { PriceReducedEmail } from '@/emails/PriceReduced';
 import { PersonalizedMatchEmail } from '@/emails/PersonalizedMatch';
 import { BackOnMarketEmail } from '@/emails/BackOnMarket';
+import { AINurtureEmail } from '@/emails/AINurture';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
@@ -39,6 +40,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No leads selected" }, { status: 400 });
     }
 
+    const { data: leadsData } = await supabase.from('leads').select('*').in('id', leadIds);
+
     // Insert Campaign Shell
     const { data: campaign, error: campaignError } = await supabase.from('crm_campaigns').insert({
       organization_id: profile.organization_id,
@@ -59,7 +62,6 @@ export async function POST(req: Request) {
     if (campaignType?.startsWith('Property') && propertyId) {
       
       const { data: propertyData } = await supabase.from('properties').select('*').eq('id', propertyId).single();
-      const { data: leadsData } = await supabase.from('leads').select('id, first_name').in('id', leadIds);
 
       const addressString = [propertyData?.address_line1, propertyData?.city, propertyData?.state].filter(Boolean).join(", ");
       const displayPrice = propertyData?.price ? `$${propertyData.price.toLocaleString()}` : "Price on Request";
@@ -131,54 +133,83 @@ export async function POST(req: Request) {
 
     } 
     // -------------------------------------------------------------------------------- //
-    // AI NURTURE SEQUENCE (Original Gemini Logic)
+    // AI NURTURE SEQUENCE (18-Touchpoint Drip)
     // -------------------------------------------------------------------------------- //
     else {
-      const prompt = `
-        Generate a real estate marketing and nurture sequence.
-        Campaign Type: ${campaignType}
-        Target Audience Description: ${targetAudience}
-  
-        The campaign should have a logical pacing (e.g., Day 0, Day 3, Day 7).
-        If the Campaign Type indicates "HOT" leads, create high frequency urgent touchpoints.
-        If it's for a "Property", create touchpoints for a listing launch (e.g., Just listed, Open house reminder, followup).
-        
-        Return the campaign as a JSON array of objects, exactly like this:
-        [
-          {
-            "day": number, // Day 0 means send immediately today.
-            "type": "Email", // We only support Email via Resend right now
-            "subject": "Catchy AI-generated subject line",
-            "content": "HTML email body content. You can write rich HTML here with headings and paragraphs. Do not use generic [Lead Name] placeholders since this gets sent directly. Just say Hello or Hi there."
-          }
-        ]
-  
-        Provide at least 3-5 touchpoints.
-      `;
-  
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const agentDetails = {
+        name: profile ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Agent" : "Agent",
+        title: (profile as any)?.title || "Real Estate Professional",
+        phone: (profile as any)?.phone_number || (profile as any)?.phone || "",
+        email: (profile as any)?.email || user.email,
+        image: profile?.avatar_url || ""
+      };
+
+      // Generate sequence concurrently for all selected leads to incorporate their internal notes
+      await Promise.all((leadsData || []).map(async (lead) => {
+        const prompt = `
+          You are an expert real estate agent. Generate a strategic, 18-touchpoint email marketing and nurture sequence.
+          Campaign Type: ${campaignType}
+          Target Audience Description: ${targetAudience}
+          Lead Name: ${lead.first_name || "Valued Client"}
+          Lead Internal Notes: ${// @ts-ignore
+          lead.internal_notes || "N/A"}
+    
+          CRITICAL REQUIREMENT: You MUST generate EXACTLY 18 distinct email touchpoints.
+          Use the 'Lead Internal Notes' to thoroughly personalize the messaging to their context, timeline, and interests.
+          
+          The pacing MUST span approximately 12 months with the following structure:
+          - Front-loaded urgency: Days 0, 3, 7, 14.
+          - Tapering off: Days 21, 30, 45, 60, 75.
+          - Long-term check-ins: Days 90, 120, 150, 180, 210, 240, 270, 300, 330.
+          
+          Return the campaign as a STRICT JSON array of exactly 18 objects, like this:
+          [
+            {
+              "day": 0, // Number of days from launch to send this email
+              "type": "Email", // Always "Email"
+              "subject": "Catchy, personalized subject line",
+              "content": "Rich HTML email body content. Write professional, consultative copy. Use <p>, <strong>, and <br/> tags."
+            }
+          ]
+        `;
+    
+        try {
+          const result = await model.generateContent(prompt);
+          const text = result.response.text();
+          
+          const jsonMatch = text.match(/\[[\s\S]*\]/);
+          const touchpointsJSON = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
       
-      const jsonMatch = text.match(/\[[\s\S]*\]/);
-      const touchpointsJSON = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+          for (const tp of touchpointsJSON) {
+            const sendDate = new Date(now);
+            sendDate.setDate(sendDate.getDate() + (tp.day || 0));
+    
+            // Render React abstraction into HTML string
+            const emailComponent = React.createElement(AINurtureEmail, { 
+              contentHtml: tp.content, 
+              agentDetails: {
+                ...agentDetails,
+                headshotUrl: agentDetails.image
+              } 
+            });
+            const compiledHtml = await render(emailComponent);
   
-      for (const leadId of leadIds) {
-        for (const tp of touchpointsJSON) {
-          const sendDate = new Date(now);
-          sendDate.setDate(sendDate.getDate() + (tp.day || 0));
-  
-          rowsToInsert.push({
-            campaign_id: campaign.id,
-            lead_id: leadId,
-            agent_id: user.id,
-            channel: tp.type || 'Email',
-            subject: tp.subject || 'Specular OS Update',
-            content: tp.content || 'Update from Loomis CRM',
-            scheduled_for: sendDate.toISOString(),
-            status: 'pending'
-          });
+            rowsToInsert.push({
+              campaign_id: campaign.id,
+              lead_id: lead.id,
+              agent_id: user.id,
+              channel: tp.type || 'Email',
+              subject: tp.subject || 'Follow up',
+              content: compiledHtml,
+              raw_content: tp.content,
+              scheduled_for: sendDate.toISOString(),
+              status: 'pending'
+            });
+          }
+        } catch (e) {
+          console.error(`Failed to generate or parse sequence for lead ${lead.id}:`, e);
         }
-      }
+      }));
     }
 
     // -------------------------------------------------------------------------------- //

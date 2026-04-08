@@ -41,10 +41,38 @@ const statusLabel: Record<string, string> = {
   WITHDRAWN: "Off Market",
 };
 
-export function PropertyClientView({ property, googleMapsApiKey }: { property: PropertyPublic, googleMapsApiKey: string }) {
+export function PropertyClientView({ property, googleMapsApiKey, mode }: { property: PropertyPublic, googleMapsApiKey: string, mode?: string }) {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [isOpenHouseLocked, setIsOpenHouseLocked] = useState(mode === 'openhouse');
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenHouseSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const first_name = formData.get("first_name") as string;
+    const last_name = formData.get("last_name") as string;
+    const email = formData.get("email") as string;
+    const phone = formData.get("phone") as string;
+    const working_with_realtor = formData.get("working_with_realtor") === "on";
+    const keep_me_informed = formData.get("keep_me_informed") === "on";
+    
+    await fetch("/api/crm/open-house/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        property,
+        first_name,
+        last_name,
+        email,
+        phone,
+        working_with_realtor,
+        keep_me_informed
+      })
+    });
+
+    setIsOpenHouseLocked(false);
+  };
 
   useEffect(() => {
     // Record page view on initial load
@@ -89,6 +117,61 @@ export function PropertyClientView({ property, googleMapsApiKey }: { property: P
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+      
+      {isOpenHouseLocked && (
+        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-[#050709]/80 backdrop-blur-2xl p-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md bg-[#0A0D14] border border-white/10 rounded-[2.5rem] p-8 shadow-[0_0_80px_rgba(0,0,0,0.8)] relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-40 h-40 bg-cyan/10 blur-[80px] pointer-events-none" style={{ backgroundColor: `${primary}10` }} />
+            
+            <div className="text-center mb-8">
+              <div className="size-20 rounded-full mx-auto mb-4 border-2 p-1 overflow-hidden" style={{ borderColor: primary }}>
+                 {property.thumbnail_url ? (
+                   <img src={property.thumbnail_url} className="w-full h-full object-cover rounded-full" alt="Property" />
+                 ) : (
+                   <div className="w-full h-full bg-onyx flex items-center justify-center rounded-full"><span className="material-symbols-outlined text-white">house</span></div>
+                 )}
+              </div>
+              <h2 className="text-2xl font-black tracking-tight text-white mb-2">Welcome to the Open House</h2>
+              <p className="text-white/50 text-sm font-medium">Please sign in to unlock full property details, photos, and agent contact info.</p>
+            </div>
+
+            <form onSubmit={handleOpenHouseSubmit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <input required type="text" name="first_name" placeholder="First Name" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 transition-all font-medium" />
+                <input required type="text" name="last_name" placeholder="Last Name" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 transition-all font-medium" />
+              </div>
+              <input required type="email" name="email" placeholder="Email Address" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 transition-all font-medium" />
+              <input type="tel" name="phone" placeholder="Phone Number (Optional)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 transition-all font-medium" />
+              
+              <div className="flex flex-col gap-3 mt-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center">
+                    <input type="checkbox" name="working_with_realtor" className="peer appearance-none w-5 h-5 border border-white/20 rounded bg-white/5 checked:bg-cyan checked:border-cyan transition-all" style={{ '--tw-checked-bg': primary } as any} />
+                    <span className="material-symbols-outlined text-white text-[14px] absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity">check</span>
+                  </div>
+                  <span className="text-white/70 text-sm font-medium group-hover:text-white transition-colors">I'm currently working with a realtor</span>
+                </label>
+                
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center">
+                    <input type="checkbox" name="keep_me_informed" className="peer appearance-none w-5 h-5 border border-white/20 rounded bg-white/5 checked:bg-cyan checked:border-cyan transition-all" style={{ '--tw-checked-bg': primary } as any} />
+                    <span className="material-symbols-outlined text-white text-[14px] absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity">check</span>
+                  </div>
+                  <span className="text-white/70 text-sm font-medium group-hover:text-white transition-colors">Keep me informed about this property and others</span>
+                </label>
+              </div>
+
+              <button type="submit" className="w-full py-4 mt-4 rounded-xl font-black uppercase tracking-widest text-[11px] text-[#050709] transition-all hover:brightness-110 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)]" style={{ backgroundColor: primary }}>
+                Unlock Listing
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <section className="relative w-full h-[65vh] min-h-[450px] overflow-hidden group">

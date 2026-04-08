@@ -51,8 +51,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
-export default async function PropertyLandingPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function PropertyLandingPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ mode?: string }> }) {
+  const { id } = await props.params;
+  const searchParams = await props.searchParams;
+  const mode = searchParams.mode;
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_property_public", { p_property_id: id });
 
@@ -82,6 +84,6 @@ export default async function PropertyLandingPage({ params }: { params: Promise<
 
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-  return <PropertyClientView property={p} googleMapsApiKey={googleMapsApiKey} />;
+  return <PropertyClientView property={p} googleMapsApiKey={googleMapsApiKey} mode={mode} />;
 }
 
