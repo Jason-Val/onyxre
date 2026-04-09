@@ -16,10 +16,41 @@ import { motion } from "framer-motion";
 import { formatDistanceToNow, parseISO, format, subDays } from "date-fns";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { EditEmailModal } from "@/components/crm/EditEmailModal";
 
 export default function CRMClient({ leads, touchpoints, properties }: { leads: any[], touchpoints: any[], properties: any[] }) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTouchpoint, setEditingTouchpoint] = useState<any>(null);
+
+  const handleSaveTouchpoint = async (id: string, updates: any) => {
+    try {
+      const res = await fetch("/api/crm/touchpoints/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates })
+      });
+      const { success } = await res.json();
+      if (success) {
+        setEditingTouchpoint(null);
+        router.refresh();
+      } else {
+        alert("Failed to save changes.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving email.");
+    }
+  };
+
+  const now = new Date();
+  const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const actionRequiredTouchpoints = touchpoints.filter(t => {
+    if (t.status !== 'draft') return false;
+    if (!t.scheduled_for) return false;
+    const d = new Date(t.scheduled_for);
+    return d >= now && d <= next7Days;
+  }).sort((a,b) => new Date(a.scheduled_for).getTime() - new Date(b.scheduled_for).getTime());
 
   // Compute Stats
   const sentMessages = touchpoints.filter(t => t.status === 'sent' || t.status === 'delivered');
@@ -59,27 +90,53 @@ export default function CRMClient({ leads, touchpoints, properties }: { leads: a
             Elite Relationship Engine • Gemini Pro & Twilio Powered
           </p>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-4 xl:pb-0 hide-scrollbar">
-          <Link href="/campaigns/new" className="whitespace-nowrap px-6 py-3 bg-[#161B22] border border-cyan/50 text-cyan font-bold rounded-xl flex items-center gap-2 hover:bg-cyan/10 transition-all shadow-[0_0_15px_rgba(0,209,255,0.1)]">
-            <span className="material-symbols-outlined text-lg">campaign</span>
-            Launch Campaign
-          </Link>
-          <button onClick={() => setIsModalOpen(true)} className="whitespace-nowrap px-6 py-3 bg-[#161B22] border border-[#27373a] text-slate-300 font-bold rounded-xl flex items-center gap-2 hover:bg-[#1C232B] transition-all">
-            <span className="material-symbols-outlined text-lg">door_open</span>
-            Open House Mode
-          </button>
-          <Link href="/contacts" className="whitespace-nowrap px-6 py-3 bg-[#161B22] border border-[#27373a] text-slate-300 font-bold rounded-xl flex items-center gap-2 hover:bg-[#1C232B] transition-all">
-            <span className="material-symbols-outlined text-lg">contacts</span>
-            Directory
-          </Link>
+        <div className="flex gap-4 items-center pb-4 xl:pb-0 relative z-40">
+          {/* Operations Dropdown */}
+          <div className="relative group">
+            <button className="whitespace-nowrap px-6 py-3 bg-[#161B22] border border-cyan/50 text-cyan font-bold rounded-xl flex items-center gap-2 hover:bg-cyan/10 transition-all shadow-[0_0_15px_rgba(0,209,255,0.1)]">
+              <span className="material-symbols-outlined text-lg">bolt</span>
+              Operations
+              <span className="material-symbols-outlined text-sm ml-1 text-cyan/70 transition-transform group-hover:rotate-180">expand_more</span>
+            </button>
+            <div className="absolute top-[110%] left-0 w-60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+              <div className="bg-[#11151c] border border-[#27373a] rounded-xl shadow-2xl p-2 flex flex-col gap-1">
+                <Link href="/campaigns/new" className="px-4 py-3 rounded-lg text-slate-300 hover:bg-[#1C232B] hover:text-cyan transition-colors flex items-center gap-3">
+                  <span className="material-symbols-outlined text-lg text-cyan">campaign</span>
+                  Launch Campaign
+                </Link>
+                <button onClick={() => setIsModalOpen(true)} className="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-[#1C232B] hover:text-cyan transition-colors flex items-center gap-3">
+                  <span className="material-symbols-outlined text-lg">door_open</span>
+                  Open House Mode
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Contacts Dropdown */}
+          <div className="relative group">
+            <button className="whitespace-nowrap px-6 py-3 bg-[#161B22] border border-[#27373a] text-slate-300 font-bold rounded-xl flex items-center gap-2 hover:bg-[#1C232B] transition-all">
+              <span className="material-symbols-outlined text-lg">folder_shared</span>
+              Contacts
+              <span className="material-symbols-outlined text-sm ml-1 text-slate-500 transition-transform group-hover:rotate-180">expand_more</span>
+            </button>
+            <div className="absolute top-[110%] left-0 w-60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+              <div className="bg-[#11151c] border border-[#27373a] rounded-xl shadow-2xl p-2 flex flex-col gap-1">
+                <Link href="/contacts" className="px-4 py-3 rounded-lg text-slate-300 hover:bg-[#1C232B] hover:text-white transition-colors flex items-center gap-3">
+                  <span className="material-symbols-outlined text-lg">contacts</span>
+                  Directory
+                </Link>
+                <button className="w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-[#1C232B] hover:text-white transition-colors flex items-center gap-3">
+                  <span className="material-symbols-outlined text-lg">cloud_upload</span>
+                  Bulk Import
+                </button>
+              </div>
+            </div>
+          </div>
+
           <Link href="/contacts/new" className="whitespace-nowrap px-8 py-3 bg-cyan text-onyx font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-3 hover:brightness-110 transition-all shadow-[0_0_30px_rgba(0,209,255,0.4)]">
             <span className="material-symbols-outlined font-bold">person_add</span>
             New Lead
           </Link>
-          <button className="whitespace-nowrap px-6 py-3 bg-[#161B22] border border-[#27373a] text-slate-300 font-bold rounded-xl flex items-center gap-2 hover:bg-[#1C232B] transition-all">
-            <span className="material-symbols-outlined text-lg">cloud_upload</span>
-            Bulk Import
-          </button>
         </div>
       </header>
 
@@ -142,6 +199,59 @@ export default function CRMClient({ leads, touchpoints, properties }: { leads: a
           </button>
         </div>
       </div>
+
+      {/* Action Required Table */}
+      {actionRequiredTouchpoints.length > 0 && (
+        <div className="bg-[#11151c] border border-rose-500/30 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(244,63,94,0.1)] flex-1 mb-6">
+          <div className="p-6 border-b border-rose-500/20 flex items-center justify-between bg-rose-500/5">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-rose-500 text-2xl font-black">warning</span>
+              <h3 className="font-black text-xl text-white uppercase italic tracking-tighter">Action Required</h3>
+              <span className="px-3 py-1 bg-rose-500 border border-rose-400 text-onyx rounded-full text-[10px] font-black uppercase tracking-widest ml-2 hidden md:inline-block">
+                Drafts Due Soon
+              </span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[#27373a] bg-[#161B22]/50">
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Contact</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Subject</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Scheduled For</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#161B22]">
+                {actionRequiredTouchpoints.map(tp => {
+                  const lead = leads.find(l => l.id === tp.lead_id) || {};
+                  const name = [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "Unknown";
+                  let dateStr = "Unknown";
+                  if (tp.scheduled_for) {
+                      dateStr = formatDistanceToNow(parseISO(tp.scheduled_for), { addSuffix: true });
+                  }
+                  
+                  return (
+                    <tr key={tp.id} className="hover:bg-rose-500/5 transition-colors group">
+                      <td className="px-6 py-4 font-bold text-white">{name}</td>
+                      <td className="px-6 py-4 text-sm text-slate-300 max-w-[200px] truncate" title={tp.subject}>{tp.subject || "No Subject"}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-rose-400">{dateStr}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={() => setEditingTouchpoint(tp)}
+                          className="px-4 py-2 bg-rose-500/10 border border-rose-500/30 text-rose-500 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-[0_0_10px_rgba(244,63,94,0.2)] whitespace-nowrap"
+                        >
+                          Edit Email
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Main Hot Leads Table */}
       <div className="bg-[#11151c] border border-[#27373a] rounded-2xl overflow-hidden shadow-2xl flex-1">
@@ -253,6 +363,12 @@ export default function CRMClient({ leads, touchpoints, properties }: { leads: a
           </motion.div>
         </div>
       )}
+
+      <EditEmailModal 
+        touchpoint={editingTouchpoint} 
+        onClose={() => setEditingTouchpoint(null)}
+        onSave={handleSaveTouchpoint}
+      />
     </div>
   );
 }
