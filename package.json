@@ -25,6 +25,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-email": "^5.2.10",
+    "react-quill-new": "^3.8.3",
     "recharts": "^3.8.0",
     "resend": "^6.9.4",
     "svix": "^1.89.0",

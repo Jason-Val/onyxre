@@ -13,24 +13,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-  const { id, subject, raw_content, scheduled_for } = await req.json();
+    const { lead_id, campaign_id, subject, raw_content, scheduled_for } = await req.json();
 
-    if (!id || !subject || !raw_content || !scheduled_for) {
+    if (!lead_id || !subject || !raw_content || !scheduled_for) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Get current touchpoint to ensure they own it & recompile the HTML
-    const { data: touchpoint, error: fetchError } = await supabase
-      .from('crm_campaign_touchpoints')
-      .select('agent_id, lead_id, status, crm_campaigns(agent_id)')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !touchpoint) {
-      return NextResponse.json({ error: "Touchpoint not found" }, { status: 404 });
-    }
-
-    // Fetch Agent Details (for re-compiling the email)
+    // Fetch Agent Details (for compiling the email)
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     
     const agentDetails = {
@@ -42,7 +31,7 @@ export async function POST(req: Request) {
       headshotUrl: profile?.avatar_url || ""
     };
 
-    // Re-compile HTML with edited raw content
+    // Compile HTML with raw content
     const emailComponent = React.createElement(AINurtureEmail, { 
       contentHtml: raw_content, 
       agentDetails 
@@ -51,28 +40,31 @@ export async function POST(req: Request) {
     const compiledHtml = await render(emailComponent);
 
     const isDraft = /\[.*?\]/.test(subject) || /\[.*?\]/.test(raw_content);
-    const newStatus = (touchpoint.status === 'sent') ? 'sent' : (isDraft ? 'draft' : 'pending');
+    const tpStatus = isDraft ? 'draft' : 'pending';
 
-    // Update in DB
-    const { error: updateError } = await supabase
+    // Insert into DB
+    const { data: insertedTouchpoint, error: insertError } = await supabase
       .from('crm_campaign_touchpoints')
-      .update({
+      .insert({
+        agent_id: user.id,
+        lead_id,
+        campaign_id: campaign_id || undefined, // If null, constraints might fail if it's strictly required
+        channel: 'Email',
         subject,
         raw_content,
         content: compiledHtml,
-        status: newStatus,
-        scheduled_for, // Include new scheduling
-        updated_at: new Date().toISOString()
+        status: tpStatus,
+        scheduled_for: scheduled_for
       })
-      .eq('id', id)
-      .eq('agent_id', user.id);
+      .select()
+      .single();
 
-    if (updateError) throw updateError;
+    if (insertError) throw insertError;
 
-    return NextResponse.json({ success: true, compiledHtml, newStatus });
+    return NextResponse.json({ success: true, compiledHtml, newStatus: tpStatus, newTouchpoint: insertedTouchpoint });
 
   } catch (error: any) {
-    console.error("Failed to update touchpoint:", error);
+    console.error("Failed to create touchpoint:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

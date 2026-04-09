@@ -28,28 +28,71 @@ export default function DossierClient({ initialLead, initialTouchpoints }: { ini
   const name = [initialLead.first_name, initialLead.last_name].filter(Boolean).join(" ") || "Unknown";
   const initials = initialLead.first_name ? initialLead.first_name.charAt(0) : "?";
 
-  const handleSaveTouchpoint = async (id: string, updates: { subject: string, raw_content: string }) => {
+  const handleSaveTouchpoint = async (id: string, updates: { subject: string, raw_content: string, scheduled_for: string }) => {
     try {
-      const res = await fetch("/api/crm/touchpoints/edit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...updates })
-      });
-      
-      const { success, compiledHtml } = await res.json();
-      
-      if (success) {
-        setTouchpoints(prev => prev.map(tp => tp.id === id ? { 
-          ...tp, 
-          subject: updates.subject, 
-          raw_content: updates.raw_content,
-          content: compiledHtml
-        } : tp));
-        setEditingTouchpoint(null);
+      if (id === 'new') {
+         const res = await fetch("/api/crm/touchpoints/create", {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify({ 
+             lead_id: initialLead.id,
+             campaign_id: editingTouchpoint?.campaign_id || touchpoints[0]?.campaign_id || initialLead.assigned_campaign,
+             ...updates 
+           })
+         });
+         const { success, newTouchpoint } = await res.json();
+         if (success && newTouchpoint) {
+            setTouchpoints(prev => [...prev, newTouchpoint].sort((a,b) => new Date(a.scheduled_for).getTime() - new Date(b.scheduled_for).getTime()));
+            setEditingTouchpoint(null);
+         }
+      } else {
+        const res = await fetch("/api/crm/touchpoints/edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, ...updates })
+        });
+        const { success, compiledHtml, newStatus } = await res.json();
+        
+        if (success) {
+          setTouchpoints(prev => prev.map(tp => tp.id === id ? { 
+            ...tp, 
+            subject: updates.subject, 
+            raw_content: updates.raw_content,
+            scheduled_for: updates.scheduled_for,
+            content: compiledHtml,
+            status: newStatus || tp.status
+          } : tp).sort((a,b) => new Date(a.scheduled_for).getTime() - new Date(b.scheduled_for).getTime()));
+          setEditingTouchpoint(null);
+        }
       }
     } catch (err) {
       console.error(err);
       alert("Failed to save changes.");
+    }
+  };
+
+  const handleDeleteTouchpoint = async (id: string) => {
+    // Rely on component for modal confirm if passed directly, or native confirm as fallback
+    // The inner modal runs its own confirm, so we don't strictly need one here if we trigger via modal. 
+    // Wait, the TimelineEvent calls this directly, so we need a confirm:
+    if (!window.confirm("Are you sure you want to delete this email? This action cannot be undone.")) return;
+
+    try {
+      const res = await fetch("/api/crm/touchpoints/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      
+      const { success } = await res.json();
+      
+      if (success) {
+        setTouchpoints(prev => prev.filter(tp => tp.id !== id));
+        if (editingTouchpoint?.id === id) setEditingTouchpoint(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete touchpoint.");
     }
   };
 
@@ -76,7 +119,17 @@ export default function DossierClient({ initialLead, initialTouchpoints }: { ini
           <button className="px-6 py-3 bg-[#161B22] border border-[#27373a] text-slate-300 font-bold rounded-xl hover:bg-[#1C232B] transition-all flex items-center gap-2">
             <span className="material-symbols-outlined text-lg">edit</span> Edit
           </button>
-          <button className="px-8 py-3 bg-cyan text-onyx font-black uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(0,209,255,0.3)] hover:brightness-110 transition-all flex items-center gap-2">
+          <button 
+            className="px-8 py-3 bg-cyan text-onyx font-black uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(0,209,255,0.3)] hover:brightness-110 transition-all flex items-center gap-2"
+            onClick={() => setEditingTouchpoint({
+              id: 'new',
+              campaign_id: touchpoints[0]?.campaign_id || initialLead.assigned_campaign,
+              channel: 'Email',
+              subject: '',
+              raw_content: '',
+              scheduled_for: new Date(Date.now() + 86400000).toISOString()
+            })}
+          >
             <span className="material-symbols-outlined font-bold">send</span> Message
           </button>
         </div>
@@ -90,7 +143,7 @@ export default function DossierClient({ initialLead, initialTouchpoints }: { ini
               <span className="material-symbols-outlined uppercase">badge</span> Dossier Summary
             </h3>
             <div className="space-y-4">
-              <DossierItem label="Emails Queued" value={touchpoints.filter(t => t.status === 'pending').length.toString()} icon="mail" />
+              <DossierItem label="Emails Queued" value={touchpoints.filter(t => t.status === 'pending' || t.status === 'draft').length.toString()} icon="mail" />
               <DossierItem label="Emails Sent" value={touchpoints.filter(t => t.status === 'sent').length.toString()} icon="mark_email_read" />
               {initialLead.internal_notes && (
                 <div className="mt-4 pt-4 border-t border-[#27373a]">
@@ -139,17 +192,21 @@ export default function DossierClient({ initialLead, initialTouchpoints }: { ini
               const isPending = tp.status === 'pending';
               const isSent = tp.status === 'sent';
 
+              const isDraft = tp.status === 'draft';
+              const isEditable = isPending || isDraft;
+
               return (
                 <TimelineEvent 
                   key={tp.id}
                   type={tp.channel}
                   title={tp.subject}
                   content={tp.raw_content ? tp.raw_content.slice(0, 80) + '...' : 'Open editor to view content'}
-                  time={dateStr + (isPending ? " (Scheduled)" : "")}
+                  time={dateStr + (isPending ? " (Scheduled)" : isDraft ? " (Action Required)" : "")}
                   status={tp.status}
-                  statusColor={isPending ? "bg-amber-500" : isSent ? "bg-emerald-500" : "bg-cyan"}
-                  onClick={() => isPending && setEditingTouchpoint(tp)}
-                  clickable={isPending}
+                  statusColor={isPending ? "bg-amber-500" : isSent ? "bg-emerald-500" : isDraft ? "bg-rose-500" : "bg-cyan"}
+                  onClick={() => isEditable && setEditingTouchpoint(tp)}
+                  clickable={isEditable}
+                  onDelete={isEditable ? () => handleDeleteTouchpoint(tp.id) : undefined}
                 />
               )
             }) : (
@@ -163,6 +220,25 @@ export default function DossierClient({ initialLead, initialTouchpoints }: { ini
         touchpoint={editingTouchpoint} 
         onClose={() => setEditingTouchpoint(null)}
         onSave={handleSaveTouchpoint}
+        // Since EditEmailModal uses its own native window.confirm, we bypass DossierClient's confirm by direct extraction
+        // Wait, if we pass handleDeleteTouchpoint it'll confirm twice! Let's pass a wrapper that skips the double confirm if needed.
+        // Actually, we must use `window.confirm` carefully, we can just remove the confirm inside Dossier if the inner modal confirms, OR we can remove the one inside the EditModal and let Dossier handle it globally. But wait, `window.confirm` is cheap. Let's just create an unconfirmed deletion routine.
+        onDelete={async (id) => {
+           try {
+            const res = await fetch("/api/crm/touchpoints/delete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id })
+            });
+            const { success } = await res.json();
+            if (success) {
+              setTouchpoints(prev => prev.filter(tp => tp.id !== id));
+              setEditingTouchpoint(null);
+            }
+          } catch (err) {
+            alert("Failed to delete touchpoint.");
+          }
+        }}
       />
     </div>
   );
@@ -181,9 +257,9 @@ function DossierItem({ label, value, icon }: { label: string, value: string, ico
 }
 
 function TimelineEvent({ 
-  type, title, content, time, status, statusColor, onClick, clickable 
+  type, title, content, time, status, statusColor, onClick, clickable, onDelete
 }: { 
-  type: string, title: string, content: string, time: string, status: string, statusColor: string, onClick?: () => void, clickable?: boolean
+  type: string, title: string, content: string, time: string, status: string, statusColor: string, onClick?: () => void, clickable?: boolean, onDelete?: () => void
 }) {
   return (
     <div 
@@ -198,7 +274,18 @@ function TimelineEvent({
       <div className={`flex-1 bg-onyx-surface p-4 rounded-xl border border-[#27373a] ${clickable ? 'group-hover:border-cyan/50' : ''} transition-colors`}>
         <div className="flex items-center justify-between mb-2">
           <h4 className="font-black text-white uppercase tracking-tight truncate max-w-[70%]">{title}</h4>
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{time}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{time}</span>
+            {onDelete && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="text-slate-500 hover:text-rose-500 transition-colors flex items-center justify-center p-1 rounded hover:bg-rose-500/10"
+                title="Delete Touchpoint"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-slate-400 text-sm leading-relaxed mb-4 border-l-2 border-[#27373a] pl-4 py-1 italic">
           "{content.replace(/<[^>]+>/g, '')}"

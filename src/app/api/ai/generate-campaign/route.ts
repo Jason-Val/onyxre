@@ -12,7 +12,7 @@ import { BackOnMarketEmail } from '@/emails/BackOnMarket';
 import { AINurtureEmail } from '@/emails/AINurture';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export async function POST(req: Request) {
   try {
@@ -156,6 +156,10 @@ export async function POST(req: Request) {
     
           CRITICAL REQUIREMENT: You MUST generate EXACTLY 18 distinct email touchpoints.
           Use the 'Lead Internal Notes' to thoroughly personalize the messaging to their context, timeline, and interests.
+
+          IMPORTANT RULES:
+          1. DO NOT include a sign-off, signature, or agent contact information block at the end of the emails. That will be automatically attached by the system. End the email warmly but without names/titles.
+          2. If you need to reference external resources or listings, use placeholders like [Link to listings] or [Name of specific neighborhood]. Do not attempt to guess actual URLs.
           
           The pacing MUST span approximately 12 months with the following structure:
           - Front-loaded urgency: Days 0, 3, 7, 14.
@@ -181,6 +185,8 @@ export async function POST(req: Request) {
           const touchpointsJSON = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
       
           for (const tp of touchpointsJSON) {
+            const isDraft = /\[.*?\]/.test(tp.subject || "") || /\[.*?\]/.test(tp.content || "");
+            const tpStatus = isDraft ? "draft" : "pending";
             const sendDate = new Date(now);
             sendDate.setDate(sendDate.getDate() + (tp.day || 0));
     
@@ -203,7 +209,7 @@ export async function POST(req: Request) {
               content: compiledHtml,
               raw_content: tp.content,
               scheduled_for: sendDate.toISOString(),
-              status: 'pending'
+              status: tpStatus
             });
           }
         } catch (e) {
